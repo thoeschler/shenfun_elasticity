@@ -35,14 +35,8 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     # some parameters
     dim = len(dom)
     
-    # dimensionless domain
-    dom_dimless = []
-    for i in range(dim):
-        tmp = []
-        for j in range(len(dom[i])):
-            tmp.append(dom[i][j]/nondim_length)
-        dom_dimless.append(tuple(tmp))
-    dom_dimless = tuple(dom_dimless)
+    # dimensionless domain    
+    dom_dimless = tuple([tuple([dom[i][j]/nondim_length for j in range(dim)]) for i in  range(dim)])
     
     # dimensionless material_parameters
     lambd = material_parameters[0]/nondim_mat_param
