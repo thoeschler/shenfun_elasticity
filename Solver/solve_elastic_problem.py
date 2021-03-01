@@ -14,7 +14,7 @@ import math
 def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
                             nondim_disp=1.0, nondim_length=1.0, nondim_mat_param=1.0, plot_disp=False, \
                             measure_time=False, compute_error=False, u_ana=None):
-
+    
     # assert input
     assert isinstance(N, int)
     assert isinstance(dom, tuple)
@@ -36,7 +36,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     dim = len(dom)
     
     # dimensionless domain    
-    dom_dimless = tuple([tuple([dom[i][j]/nondim_length for j in range(dim)]) for i in  range(dim)])
+    dom_dimless = tuple([tuple([dom[i][j]/nondim_length for j in range(2)]) for i in  range(dim)])
     
     # dimensionless material_parameters
     lambd = material_parameters[0]/nondim_mat_param
