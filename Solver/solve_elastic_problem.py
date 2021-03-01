@@ -269,15 +269,8 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     # some parameters
     dim = len(dom)
     
-    # dimensionless domain
-    dom_dimless = []
-    for i in range(dim):
-        tmp = []
-        for j in range(len(dom[i])):
-            tmp.append(dom[i][j]/nondim_length)
-        dom_dimless.append(tuple(tmp))
-    dom_dimless = tuple(dom_dimless)
-    
+    # dimensionless domain    
+    dom_dimless = tuple([tuple([dom[i][j]/nondim_length for j in range(2)]) for i in  range(dim)])
     
     # dimensionless material_parameters
     lambd = material_parameters[0]/nondim_mat_param
@@ -288,35 +281,40 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     c4 = material_parameters[5]/nondim_mat_param/nondim_length**2
     c5 = material_parameters[6]/nondim_mat_param/nondim_length**2
 
-    # dimensionless boundary conditions
+   # dimensionless boundary conditions
     bcs_dimless = []
     for i in range(dim): # nb of components
+        
         bcs_for_one_component = []
         for j in range(dim): # nb of bcs for each component
+            
             if isinstance(boundary_conditions[i][j], tuple): # dirichlet-bcs are given as a tuple
-                temp_list = []
-                for k in range(len(boundary_conditions[i][j])):
-                    tmp = boundary_conditions[i][j][k]
-                    if isinstance(tmp, sympy.Expr): # coordinate transformation
-                        for coord in tmp.free_symbols:
-                            tmp = tmp.replace(coord, coord*nondim_length)
-                    temp_list.append(tmp / nondim_disp)
-                bcs_for_one_component.append(tuple(temp_list))
+                tmp = []
+                for component in boundary_conditions[i][j]: # coordinate transformation for each component
+                    if isinstance(component, sympy.Expr): # coordinate transformation
+                        for coord in component.free_symbols:
+                            component = component.replace(
+                                coord, coord*nondim_length
+                            )
+                    tmp.append(component / nondim_disp)
+                bcs_for_one_component.append(tuple(tmp))
+                
             elif isinstance(boundary_conditions[i][j], list):
                 assert isinstance(boundary_conditions[i][j][0], str)
                 assert isinstance(boundary_conditions[i][j][1], tuple)
-                temp_list = []
-                for k in range(len(boundary_conditions[i][j][1])):
-                    tmp = boundary_conditions[i][j][1][k]
-                    if isinstance(tmp, sympy.Expr): # coordinate transformation
-                        for coord in tmp.free_symbols:
-                            tmp = tmp.replace(coord, coord*nondim_length)
-                    temp_list.append(tmp / nondim_disp)
-                bcs_for_one_component.append([boundary_conditions[i][j][0], tuple(temp_list)]) # change tuple, leave str as it is
+                tmp = []
+                for component in boundary_conditions[i][j][1]:
+                    if isinstance(component, sympy.Expr): # coordinate transformation
+                        for coord in component.free_symbols:
+                            component = component.replace(coord, coord*nondim_length)
+                    tmp.append(component / nondim_disp)
+                bcs_for_one_component.append((boundary_conditions[i][j][0], tuple(tmp))) # change tuple, leave str as it is
+                
             else: # e.g. 'upperdirichlet', 'lowerdirichlet', None
                 bcs_for_one_component.append(boundary_conditions[i][j])
-        bcs_dimless.append(bcs_for_one_component)
-    bcs_dimless = tuple(tuple( bc for bc in comp ) for comp in bcs_dimless) # transform lists to tuples
+                
+        bcs_dimless.append(tuple(bcs_for_one_component))
+    bcs_dimless = tuple(bcs_dimless) # transform lists to tuples    
         
     # dimensionless body forces
     b = list(body_forces)
@@ -328,10 +326,10 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     body_forces_dimless = tuple(b)
     
     # create VectorSpace for displacement
-    # check if nonhomogeneous boundary conditions are applied
-    # check if only dirichlet-boundary conditions are applied
     vec_space = []
+    # check if only dirichlet-boundary conditions are applied
     only_dirichlet_bcs = True
+    # check if nonhomogeneous boundary conditions are applied
     nonhomogeneous_bcs = False
     
     for i in range(dim): # nb of displacement components
@@ -341,18 +339,17 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
             tens_space.append(basis)
             if basis.has_nonhomogeneous_bcs:
                 nonhomogeneous_bcs = True
-            if not isinstance(basis, ShenBiharmonic):
+            if not(isinstance(basis, ShenBiharmonic)):
                 only_dirichlet_bcs = False
         vec_space.append(TensorProductSpace(comm, tuple(tens_space)))
     V = VectorSpace(vec_space)
     
-    
     # body_forces on quadrature points
-    tmp = []
+    tens_space_no_bcs = []
     for i in range(dim):
-        tmp.append(FunctionSpace(N, domain=dom_dimless[i], family='legendre', bc=None))
-    T = TensorProductSpace(comm, tuple(tmp))
-    V_none = VectorSpace([T, T])
+        tens_space_no_bcs.append(FunctionSpace(N, domain=dom_dimless[i], family='legendre', bc=None))
+    T_none = TensorProductSpace(comm, tuple(tens_space_no_bcs))
+    V_none = VectorSpace([T_none, T_none])
     body_forces_quad = Array(V_none, buffer=body_forces_dimless)
     
     # test and trial functions
