@@ -203,3 +203,9 @@ def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector, plo
             plt.show()
             
     return t
+
+def double_tractions():
+    pass
+
+def edge_forces():
+    pass
