@@ -45,32 +45,37 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     # dimensionless boundary conditions
     bcs_dimless = []
     for i in range(dim): # nb of components
+        
         bcs_for_one_component = []
         for j in range(dim): # nb of bcs for each component
+            
             if isinstance(boundary_conditions[i][j], tuple): # dirichlet-bcs are given as a tuple
-                temp_list = []
-                for k in range(len(boundary_conditions[i][j])):
-                    tmp = boundary_conditions[i][j][k]
-                    if isinstance(tmp, sympy.Expr): # coordinate transformation
-                        for coord in tmp.free_symbols:
-                            tmp = tmp.replace(coord, coord*nondim_length)
-                    temp_list.append(tmp / nondim_disp)
-                bcs_for_one_component.append(tuple(temp_list))
+                tmp = []
+                for component in boundary_conditions[i][j]: # coordinate transformation for each component
+                    if isinstance(component, sympy.Expr): # coordinate transformation
+                        for coord in component.free_symbols:
+                            component = component.replace(
+                                coord, coord*nondim_length
+                            )
+                    tmp.append(component / nondim_disp)
+                bcs_for_one_component.append(tuple(tmp))
+                
             elif isinstance(boundary_conditions[i][j], list):
                 assert isinstance(boundary_conditions[i][j][0], str)
                 assert isinstance(boundary_conditions[i][j][1], tuple)
-                temp_list = []
-                for k in range(len(boundary_conditions[i][j][1])):
-                    tmp = boundary_conditions[i][j][1][k]
-                    if isinstance(tmp, sympy.Expr): # coordinate transformation
-                        for coord in tmp.free_symbols:
-                            tmp = tmp.replace(coord, coord*nondim_length)
-                    temp_list.append(tmp / nondim_disp)
-                bcs_for_one_component.append([boundary_conditions[i][j][0], tuple(temp_list)]) # change tuple, leave str as it is
+                tmp = []
+                for component in boundary_conditions[i][j][1]:
+                    if isinstance(component, sympy.Expr): # coordinate transformation
+                        for coord in component.free_symbols:
+                            component = component.replace(coord, coord*nondim_length)
+                    tmp.append(component / nondim_disp)
+                bcs_for_one_component.append((boundary_conditions[i][j][0], tuple(tmp))) # change tuple, leave str as it is
+                
             else: # e.g. 'upperdirichlet', 'lowerdirichlet', None
                 bcs_for_one_component.append(boundary_conditions[i][j])
-        bcs_dimless.append(bcs_for_one_component)
-    bcs_dimless = tuple(tuple( bc for bc in comp ) for comp in bcs_dimless) # transform lists to tuples    
+                
+        bcs_dimless.append(tuple(bcs_for_one_component))
+    bcs_dimless = tuple(bcs_dimless) # transform lists to tuples    
     
     # dimensionless body forces
     b = list(body_forces)
