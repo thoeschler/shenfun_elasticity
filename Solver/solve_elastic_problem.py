@@ -88,11 +88,11 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are applied
-    # check if only dirichlet-boundary conditions are applied
-    vec_space = []
     only_dirichlet_bcs = True
+    # check if only dirichlet-boundary conditions are applied
     nonhomogeneous_bcs = False
     
+    vec_space = []
     for i in range(dim): # nb of displacement components
         tens_space = []
         for j in range(dim): # nb of FunctionSpaces for each component
@@ -106,11 +106,11 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     V = VectorSpace(vec_space)
     
     # body_forces on quadrature points
-    tmp = []
+    tens_space_no_bcs = []
     for i in range(dim):
-        tmp.append(FunctionSpace(N, domain=dom_dimless[i], family='legendre', bc=None))
-    T = TensorProductSpace(comm, tuple(tmp))
-    V_none = VectorSpace([T, T])
+        tens_space_no_bcs.append(FunctionSpace(N, domain=dom_dimless[i], family='legendre', bc=None))
+    T_none = TensorProductSpace(comm, tuple(tens_space_no_bcs))
+    V_none = VectorSpace([T_none, T_none])
     body_forces_quad = Array(V_none, buffer=body_forces_dimless)
     
     # test and trial functions
@@ -118,8 +118,6 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     v = TestFunction(V)
     
     # matrices
-    matrices = []
-    
     A = inner(mu*grad(u), grad(v))
     
     if only_dirichlet_bcs:
@@ -137,7 +135,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
         C = inner(lambd*div(u), div(v))
         matrices = A + B + C
     
-    # right hand side of the weak formulation
+    # right hand side of weak formulation
     b = inner(v, body_forces_quad)
     
     # solution
@@ -145,8 +143,10 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     if nonhomogeneous_bcs:
         # get boundary matrices
         bc_mats = extract_bc_matrices([matrices])
+        
         # BlockMatrix for homogeneous part
         M = BlockMatrix(matrices)
+        
         # BlockMatrix for inhomogeneous part
         BM = BlockMatrix(bc_mats)
         
@@ -170,8 +170,9 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
         u_hat = M.solve(b)
     
     
-    # actual solution
-    # vector space for solution
+    # solution (not dimensionless)
+    
+    # vector space to hold the solution
     vec_space = []
     for i in range(dim): # nb of displacement components
         tens_space = []
@@ -181,7 +182,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
         vec_space.append(TensorProductSpace(comm, tuple(tens_space)))
     V_dim = VectorSpace(vec_space)
     
-    # actual solution (same coefficients, different vector space)
+    # solution (same coefficients, different vector space)
     u = Function(V_dim)
     for i in range(dim):
         u[i] = u_hat[i] # u has the same expansions coefficients as u_hat
@@ -326,7 +327,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
         b[i] *= nondim_length**2 /nondim_disp/nondim_mat_param
     body_forces_dimless = tuple(b)
     
-# create VectorSpace for displacement
+    # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are applied
     # check if only dirichlet-boundary conditions are applied
     vec_space = []
