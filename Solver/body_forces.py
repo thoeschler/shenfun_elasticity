@@ -14,10 +14,10 @@ def body_forces_cauchy(u, material_parameters):
     lambd = material_parameters[0]
     mu = material_parameters[1]
     x, y, z = symbols("x,y,z")    
-    coord = [x, y, z]
+    coords = [x, y, z]
     
     # div(u)
-    Divergence = 0
+    Divergence = 0.0
     for i in range(dim):
         Divergence += u[i].diff(coord[i])
         
