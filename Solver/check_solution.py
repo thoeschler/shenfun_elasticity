@@ -20,11 +20,9 @@ def check_solution_cauchy(u_hat, material_parameters, body_forces):
     lhs = (lambd + mu)*grad(div(u_hat)) + mu*div(grad(u_hat))
     
     # space for volumetric forces
-    bases = []
-    for i in range(dim):
-        bases.append(FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
+    bases = [FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
                                    domain=u_hat.function_space().spaces[i].bases[i].domain, \
-                                       family='legendre', bc=None))
+                                       family='legendre', bc=None)) for i in range(dim)]
     T = TensorProductSpace(comm, tuple(bases))
     V = VectorSpace([T, T])
     
@@ -63,11 +61,9 @@ def check_solution_gradient(u_hat, material_parameters, body_forces):
         (c1 + c4)*div(grad(div(grad(u_hat)))) - (c2 + c3 + c5)*grad(div(div(grad(u_hat))))
     
     # space for volumetric forces
-    bases = []
-    for i in range(dim):
-        bases.append(FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
+    bases = [FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
                                    domain=u_hat.function_space().spaces[i].bases[i].domain, \
-                                       family='legendre', bc=None))
+                                       family='legendre', bc=None)) for i in range(i)]
     T = TensorProductSpace(comm, tuple(bases))
     V = VectorSpace([T, T])
     
