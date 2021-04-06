@@ -1,12 +1,6 @@
 from shenfun import FunctionSpace, VectorSpace, TensorProductSpace, Function, project, Dx, comm
-from mpi4py import MPI
-from mpi4py_fft.pencil import Subcomm
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import cm
-from mpl_toolkits.mplot3d import axes3d
 
-def cauchy_stresses(material_parameters, u_hat, plot=False):
+def cauchy_stresses(material_parameters, u_hat):
     
     # input assertion
     assert isinstance(material_parameters, tuple)
@@ -26,16 +20,16 @@ def cauchy_stresses(material_parameters, u_hat, plot=False):
     mu = material_parameters[1]
     
     # space for stresses
-    B = []
-    for i in range(dim):
-        B.append(FunctionSpace(N, family='legendre', domain=dom[i], bc=None))
-    T_none = TensorProductSpace(comm, tuple(B))
+    tens_space = tuple([
+        FunctionSpace(N, family='legendre', domain=dom[i], bc=None) for i in range(dim)
+        ])
+    T_none = TensorProductSpace(comm, tens_space)
     
     # displacement gradient
     H = [ [None for _ in range(dim)] for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
-            H[i][j] = project(Dx(u_hat[i], j), T_none).backward()
+            H[i][j] = project(Dx(u_hat[i], j), T_none)
     
     # linear strain tensor
     E = [ [None for _ in range(dim)] for _ in range(dim)]
@@ -55,23 +49,11 @@ def cauchy_stresses(material_parameters, u_hat, plot=False):
             T[i][j] = 2.0 * mu * E[i][j] 
             if i==j:
                 T[i][j] += lambd * trE
-    if plot:
-        x_, y_ = T_none.local_mesh()
-        X, Y = np.meshgrid(x_, y_, indexing='ij')
-        for k in range(dim):
-            for l in range(dim):
-                fig = plt.figure()
-                title = 'T' + str(k + 1) + str(l + 1)
-                ax = fig.gca(projection='3d')
-                ax.plot_surface(X, Y, T[k][l], cmap=cm.coolwarm)
-                ax.set_xlabel('x')
-                ax.set_ylabel('y')
-                ax.set_title(title)
-                plt.show()
+
     return T
 
 
-def hyper_stresses(material_parameters, u_hat, plot=False):    
+def hyper_stresses(material_parameters, u_hat):    
     # input assertion
     assert isinstance(material_parameters, tuple)
     for val in material_parameters:
@@ -94,28 +76,25 @@ def hyper_stresses(material_parameters, u_hat, plot=False):
     c5 = material_parameters[4]
     
     # space for stresses
-    B = []
-    for i in range(dim):
-        B.append(FunctionSpace(N, family='legendre', domain=dom[i], bc=None))
-    T_none = TensorProductSpace(comm, tuple(B))
-    
-    # zero function
-    zero_func = Function(T_none).backward()
+    tens_space = tuple([
+        FunctionSpace(N, family='legendre', domain=dom[i], bc=None) for i in range(dim)
+        ])
+    T_none = TensorProductSpace(comm, tens_space)
     
     # Laplace
-    Laplace = [zero_func for _ in range(dim)]
+    Laplace = [0. for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
-            Laplace[i] += project(Dx(u_hat[i], j, 2), T_none).backward()
+            Laplace[i] += project(Dx(u_hat[i], j, 2), T_none)
             
     # grad(div(u))
-    GradDiv = [zero_func for _ in range(dim)]
+    GradDiv = [0. for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
-            GradDiv[i] += project(Dx(Dx(u_hat[j], j), i), T_none).backward()
+            GradDiv[i] += project(Dx(Dx(u_hat[j], j), i), T_none)
     
     # hyper stresses
-    T = [ [ [zero_func for _ in range(dim)] for _ in range(dim)] for _ in range(dim)]
+    T = [ [ [0. for _ in range(dim)] for _ in range(dim)] for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
             for k in range(dim):
@@ -133,27 +112,13 @@ def hyper_stresses(material_parameters, u_hat, plot=False):
                     if c1 != 0.:
                         T[i][j][k] += c1*Laplace[i]
                 if c4 != 0.:
-                    T[i][j][k] += project(c4*Dx(Dx(u_hat[i], j), k), T_none).backward()
+                    T[i][j][k] += project(c4*Dx(Dx(u_hat[i], j), k), T_none)
                 if c5 != 0.:
-                    T[i][j][k] += project(0.5*c5*Dx(Dx(u_hat[j], i), k), T_none).backward() + project(0.5*c5*Dx(Dx(u_hat[k], i), j), T_none).backward()
-                
-    if plot:
-        x_, y_ = T_none.local_mesh()
-        X, Y = np.meshgrid(x_, y_, indexing='ij')
-        for k in range(dim):
-            for l in range(dim):
-                for m in range(dim):
-                    fig = plt.figure()
-                    title = 'T' + str(k + 1) + str(l + 1) + str(m + 1)
-                    ax = fig.gca(projection='3d')
-                    ax.plot_surface(X, Y, T[k][l][m], cmap=cm.coolwarm)
-                    ax.set_xlabel('x')
-                    ax.set_ylabel('y')
-                    ax.set_title(title)
-                    plt.show()
+                    T[i][j][k] += project(0.5*c5*Dx(Dx(u_hat[j], i), k), T_none) + project(0.5*c5*Dx(Dx(u_hat[k], i), j), T_none)
+
     return T
 
-def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector, plot=False):
+def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector):
     # some paramaters
     dim = len(normal_vector)
     T2 = cauchy_stresses
@@ -161,51 +126,32 @@ def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector, plo
     n = normal_vector
     T_none = T2[0][0].function_space()
     
-    zero_func = Function(T_none).backward()
-    
     # compute traction vector
-    t = [zero_func for _ in range(dim)]
+    t = [0. for _ in range(dim)]
     
     # div(T3)
-    divT3 = [[zero_func for _ in range(dim)] for _ in range(dim)]
+    divT3 = [[0. for _ in range(dim)] for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
             for k in range(dim):
-                divT3[i][j] += project(Dx(T3[i][j][k].forward(), k), T_none).backward()
+                divT3[i][j] += project(Dx(T3[i][j][k], k), T_none)
+                
     # divn(T3), divt(T3)
-    divnT3 = [[zero_func for _ in range(dim)] for _ in range(dim)]
-    divtT3 = divT3
+    divnT3 = [[0. for _ in range(dim)] for _ in range(dim)]
+    divtT3 = divT3.copy()
     for i in range(dim):
         for j in range(dim):
             for k in range(dim):
                 for l in range(dim):
-                    divnT3[i][j] += ( project(Dx(T3[i][j][k].forward(), l), T_none).backward() )*n[k]*n[l]
-                    divtT3[i][j] -= ( project(Dx(T3[i][j][k].forward(), l), T_none).backward() )*n[k]*n[l]
+                    divnT3[i][j] += ( project(Dx(T3[i][j][k], l), T_none) )*n[k]*n[l]
+                    divtT3[i][j] -= ( project(Dx(T3[i][j][k], l), T_none) )*n[k]*n[l]
+                    
     # traction vector
-    t = Function(VectorSpace([T_none, T_none])).backward()
+    t = Function(VectorSpace([T_none, T_none]))
     for i in range(dim):
         for j in range(dim):
             for k in range(T_none.bases[0].N):
                 for m in range(T_none.bases[0].N):
                     t[i][k][m] += (T2[i][j][k][m] - divnT3[i][j][k][m] - 2*divtT3[i][j][k][m])*n[j]
-        
-    if plot:
-        x_, y_ = T_none.local_mesh()
-        X, Y = np.meshgrid(x_, y_, indexing='ij')
-        for k in range(dim):
-            fig = plt.figure()
-            title = 't' + str(k + 1)
-            ax = fig.gca(projection='3d')
-            ax.plot_surface(X, Y, t[i], cmap=cm.coolwarm)
-            ax.set_xlabel('x')
-            ax.set_ylabel('y')
-            ax.set_title(title)
-            plt.show()
             
     return t
-
-def double_tractions():
-    pass
-
-def edge_forces():
-    pass
