@@ -14,20 +14,20 @@ def body_forces_cauchy(u, material_parameters):
     lambd = material_parameters[0]
     mu = material_parameters[1]
     x, y, z = symbols("x,y,z")    
-    coords = [x, y, z]
+    coord = [x, y, z]
     
     # div(u)
-    Divergence = 0.0
+    Divergence = 0.
     for i in range(dim):
         Divergence += u[i].diff(coord[i])
         
     # grad(div(u))
-    GradDiv = [0.0 for _ in range(dim)]
+    GradDiv = [0. for _ in range(dim)]
     for i in range(dim):
         GradDiv[i] = Divergence.diff(coord[i])
     
     # laplace
-    Laplace = [0.0 for _ in range(dim)]
+    Laplace = [0. for _ in range(dim)]
 
     for i in range(dim):
         for j in range(dim):
@@ -61,34 +61,34 @@ def body_forces_gradient(u, material_parameters):
     coord = [x, y, z]
     
     # div(u)
-    Divergence = 0.0
+    Divergence = 0.
     for i in range(dim):
         Divergence += u[i].diff(coord[i])
         
     # div(grad(u))
-    Laplace = [0.0 for _ in range(dim)]
+    Laplace = [0. for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
             Laplace[i] += u[i].diff(coord[j], 2)
     
     # grad(div(u))
-    GradDiv = [None for _ in range(dim)]
+    GradDiv = [0. for _ in range(dim)]
     for i in range(dim):
         GradDiv[i] = Divergence.diff(coord[i])
     
     # DoubleLaplace
-    DoubleLaplace = [0.0 for _ in range(dim)]
+    DoubleLaplace = [0. for _ in range(dim)]
     for i in range(dim):
         for j in range(dim):
             DoubleLaplace[i] += Laplace[i].diff(coord[j], 2)
     
     # div(div(grad(u)))
-    DivDivGrad = 0.0
+    DivDivGrad = 0.
     for i in range(dim):
         DivDivGrad += Laplace[i].diff(coord[i])
         
     # grad(div(div(grad(u)))) / grad(div(laplace))
-    GradDivDivGrad = [None for _ in range(dim)]
+    GradDivDivGrad = [0. for _ in range(dim)]
     for i in range(dim):
         GradDivDivGrad[i] = DivDivGrad.diff(coord[i])
     
