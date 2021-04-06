@@ -1,7 +1,4 @@
 from shenfun import div, grad, Function, project, FunctionSpace, TensorProductSpace, Array, VectorSpace, inner, comm
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
 import math
 
 def check_solution_cauchy(u_hat, material_parameters, body_forces):
@@ -16,13 +13,13 @@ def check_solution_cauchy(u_hat, material_parameters, body_forces):
     lambd = material_parameters[0]
     mu = material_parameters[1]
     
-    # left hand side
+    # left hand side of lamé-navier-equation
     lhs = (lambd + mu)*grad(div(u_hat)) + mu*div(grad(u_hat))
     
     # space for volumetric forces
     bases = [FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
                                    domain=u_hat.function_space().spaces[i].bases[i].domain, \
-                                       family='legendre', bc=None)) for i in range(dim)]
+                                       family='legendre', bc=None) for i in range(dim)]
     T = TensorProductSpace(comm, tuple(bases))
     V = VectorSpace([T, T])
     
@@ -37,7 +34,7 @@ def check_solution_cauchy(u_hat, material_parameters, body_forces):
                 error_array[i][j][k] = error_array[i][j][k]**2
     error = inner((1, 1), error_array)
     return math.sqrt(error)
-
+    
 
 def check_solution_gradient(u_hat, material_parameters, body_forces):
     assert isinstance(u_hat, Function)
@@ -56,14 +53,14 @@ def check_solution_gradient(u_hat, material_parameters, body_forces):
     c4 = material_parameters[5]
     c5 = material_parameters[6]
     
-    # left hand side
+    # left hand side of balance of linear momentum
     lhs = (lambd + mu)*grad(div(u_hat)) + mu*div(grad(u_hat)) - \
         (c1 + c4)*div(grad(div(grad(u_hat)))) - (c2 + c3 + c5)*grad(div(div(grad(u_hat))))
     
     # space for volumetric forces
     bases = [FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
                                    domain=u_hat.function_space().spaces[i].bases[i].domain, \
-                                       family='legendre', bc=None)) for i in range(i)]
+                                       family='legendre', bc=None) for i in range(dim)]
     T = TensorProductSpace(comm, tuple(bases))
     V = VectorSpace([T, T])
     
