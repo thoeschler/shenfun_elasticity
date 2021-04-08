@@ -1,13 +1,9 @@
-import matplotlib.pyplot as plt
-from sympy import symbols
-import os
-os.chdir("/home/student01/tubCloud/Gradientenelastizität/Codes/")
-from stresses import hyper_stresses, cauchy_stresses, traction_vector_gradient
-from solve_elastic_problem import solve_gradient_elasticity
-from plot_template import save_disp_figure, save_cauchy_stress, save_hyper_stress
-os.chdir("/home/student01/tubCloud/Gradientenelastizität/CodesGradient/")
-family = 'legendre'
-x, y = symbols("x,y")
+from shenfun_elasticity.Solver.stresses import cauchy_stresses, hyper_stresses, traction_vector_gradient
+from shenfun_elasticity.Solver.solve_elastic_problem import solve_gradient_elasticity
+from shenfun_elasticity.Solver.plot_template import save_disp_figure, save_cauchy_stress, \
+    save_hyper_stress, save_traction_vector_gradient
+from shenfun_elasticity.Solver.change_dimensions import get_dimensionless_values, get_dimensionful_values
+
 # computational domain
 l = 100.
 h = l/2
@@ -27,27 +23,44 @@ c3 = 0.01
 c4 = 0.01
 c5 = 0.01
 # body forces
-b = (0., 0.)
+body_forces = (0., 0.)
 # boundary conditions
 bc = ((None, ['sheartest', (0, u0, 0)]), (None, (0, 0)))
 # size of discretization
 for z in range(30, 32, 2):
-    plt.close('all')
     # size of discretization
     N = z
+    
+    # get dimensionless values
+    dom_dimless, bc_dimless, body_forces_dimless, material_parameters_dimless = get_dimensionless_values(
+            dom=domain, boundary_conditions=bc, body_forces=body_forces, \
+            material_parameters=(lambd, mu, c1, c2, c3, c4, c5), nondim_disp=u0, nondim_length=l, \
+            nondim_mat_param=lambd
+            )
+        
     # calculate solution
-    u_hat = solve_gradient_elasticity(N=N, dom=domain, boundary_conditions=bc, body_forces=b, \
-                                      material_parameters=(lambd, mu, c1, c2, c3, c4, c5), nondim_disp=u0, \
-                                      nondim_length=l, nondim_mat_param=lambd, plot_disp=False, measure_time=False, \
-                                      compute_error=True)
+    u_hat_dimless = solve_gradient_elasticity(
+        N=N, dom=dom_dimless, boundary_conditions=bc_dimless, body_forces=body_forces_dimless, \
+        material_parameters=material_parameters_dimless, measure_time=False, compute_error=True
+        )
+        
+    # get dimensionfull values
+    u_hat = get_dimensionful_values(
+        u_hat_dimless=u_hat_dimless, boundary_conditions=bc, 
+        nondim_disp=u0, nondim_length=l
+        )
+        
     # calculate stresses
-    T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat, plot=False)
-    T3 = hyper_stresses(material_parameters=(c1, c2, c3, c4, c5), u_hat=u_hat, plot=False)
+    T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat)
+    T3 = hyper_stresses(material_parameters=(c1, c2, c3, c4, c5), u_hat=u_hat)
     
     # save displacement as png
     save_disp_figure(u_hat, multiplier=5.0)
+    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
+    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
     
     # save stresses as png
     save_cauchy_stress(T)
     save_hyper_stress(T3)
-    #traction_vector_gradient(T, T3, (0, 1), plot=False)
+    save_traction_vector_gradient(t_upper_lower, (0., 1.))
+    save_traction_vector_gradient(t_left_right, (1., 0.))
