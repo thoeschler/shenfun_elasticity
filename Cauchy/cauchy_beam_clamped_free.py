@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Aug  5 18:34:33 2020
-
-@author: student01
-"""
-
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import symbols

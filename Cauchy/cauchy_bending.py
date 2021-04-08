@@ -17,7 +17,7 @@ nu = 0.4 # Poisson's ratio
 lambd = E*nu/((1+nu)*(1-2*nu))
 mu = E/(2*(1+nu))
 # body forces
-b = (0., 0.)
+body_forces = (0., 0.)
 # boundary conditions
 bc = (('lowerdirichlet', None), ((0, -u0), None))
 # size of discretization
@@ -26,16 +26,21 @@ for z in range(30, 32, 2):
     N = z
     
     # get dimensionless values
-    dom_dimless, bc_dimless, body_forces_dimless, material_parameters_dimless = get_dimensionless_values(dom=domain, boundary_conditions=bc, \
-                                                  body_forces=b, material_parameters=(lambd, mu), nondim_disp=u0, nondim_length=l, \
-                                                  nondim_mat_param=lambd)
+    dom_dimless, bc_dimless, body_forces_dimless, material_parameters_dimless = get_dimensionless_values(
+        dom=domain, boundary_conditions=bc, body_forces=body_forces, material_parameters=(lambd, mu), \
+            nondim_disp=u0, nondim_length=l, nondim_mat_param=lambd
+            )
     
     # calculate solution
-    u_hat_dimless = solve_cauchy_elasticity(N=N, dom=dom_dimless, boundary_conditions=bc_dimless, body_forces=body_forces_dimless, \
-                                    material_parameters=material_parameters_dimless, measure_time=False, compute_error=True)
+    u_hat_dimless = solve_cauchy_elasticity(
+        N=N, dom=dom_dimless, boundary_conditions=bc_dimless, body_forces=body_forces_dimless, \
+        material_parameters=material_parameters_dimless, measure_time=False, compute_error=True)
     
     # get dimensionfull values
-    u_hat = get_dimensionful_values(u_hat_dimless=u_hat_dimless, boundary_conditions=bc, nondim_disp=u0, nondim_length=l)
+    u_hat = get_dimensionful_values(
+        u_hat_dimless=u_hat_dimless, boundary_conditions=bc, 
+        nondim_disp=u0, nondim_length=l
+        )
     
     # calculate stresses
     T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat)
