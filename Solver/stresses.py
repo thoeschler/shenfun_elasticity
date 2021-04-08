@@ -13,9 +13,10 @@ def cauchy_stresses(material_parameters, u_hat):
     V = u_hat.function_space()
     dim = len(V.spaces)
     N = V.spaces[0].bases[0].N
-    dom = []
-    for i in range(len(V.spaces[0])):
-        dom.append(V.spaces[0].bases[i].domain)
+    dom = tuple([
+        V.spaces[i].bases[i].domain for i in range(dim)
+        ])
+
     lambd = material_parameters[0]
     mu = material_parameters[1]
     
@@ -117,6 +118,8 @@ def hyper_stresses(material_parameters, u_hat):
                     T[i][j][k] += project(0.5*c5*Dx(Dx(u_hat[j], i), k), T_none) + project(0.5*c5*Dx(Dx(u_hat[k], i), j), T_none)
 
     return T
+
+
 
 def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector):
     # some paramaters

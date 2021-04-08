@@ -99,7 +99,7 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
             if isinstance(ua[i], sympy.Expr): # coordinate transformation
                 for coord in ua[i].free_symbols:
                     ua[i] = ua[i].replace(coord, coord*nondim_length)
-            ua[i] /= nondim_length
+            ua[i] /= nondim_disp
         
         u_ana_dimless= tuple(ua)
         

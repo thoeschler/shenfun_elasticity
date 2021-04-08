@@ -4,7 +4,6 @@ import matplotlib
 matplotlib.rcParams['text.usetex'] = True
 from matplotlib.collections import LineCollection
 from matplotlib import rc
-from matplotlib.ticker import FuncFormatter
 rc('font',**{'family':'serif','serif':['Computer Modern Roman']})
 rc('text', usetex=True)
 

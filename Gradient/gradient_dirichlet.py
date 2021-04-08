@@ -26,10 +26,10 @@ E = 400. # Young's modulus
 nu = 0.4 # Poisson's ratio
 lambd = E*nu/((1+nu)*(1-2*nu))
 mu = E/(2*(1+nu))
-c1 = 0.01
+c1 = 0.
 c2 = 0.01
 c3 = 0.01
-c4 = 0.01
+c4 = 0.
 c5 = 0.01
 # body forces
 b = body_forces_gradient(u=ua, material_parameters=(lambd, mu, c1, c2, c3, c4, c5))

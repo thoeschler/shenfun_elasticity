@@ -1,14 +1,10 @@
-import matplotlib.pyplot as plt
-from sympy import symbols, cos, sin, pi
-import os
-os.chdir("/home/student01/tubCloud/Gradientenelastizität/Codes/")
-from stresses import cauchy_stresses
-from solve_elastic_problem import solve_cauchy_elasticity
-from body_forces import body_forces_cauchy
-from plot_template import save_disp_figure, save_cauchy_stress
-os.chdir("/home/student01/tubCloud/Gradientenelastizität/CodesCauchy/")
+from shenfun_elasticity.Solver.stresses import cauchy_stresses
+from shenfun_elasticity.Solver.solve_elastic_problem import solve_cauchy_elasticity
+from shenfun_elasticity.Solver.plot_template import save_disp_figure, save_cauchy_stress
+from shenfun_elasticity.Solver.change_dimensions import get_dimensionless_values, get_dimensionful_values
+from shenfun_elasticity.Solver.body_forces import body_forces_cauchy
+from sympy import symbols, sin, cos, pi
 
-family = 'legendre'
 x, y = symbols("x,y")
 # computational domain
 l = 100.
@@ -31,15 +27,23 @@ b = body_forces_cauchy(u=ua, material_parameters=(lambd, mu))
 bc = (((0., u0*4*y/h*(1-y/h)), (0., 0.)), ((0., 0.), (0., 0.)))
 # size of discretization
 for z in range(30, 32, 2):
-    plt.close('all')
     # size of discretization
     N = z
+    
+    # get dimensionless values
+    dom_dimless, bc_dimless, body_forces_dimless, material_parameters_dimless, u_ana_dimless = get_dimensionless_values(dom=domain, boundary_conditions=bc, \
+                                                  body_forces=b, material_parameters=(lambd, mu), nondim_disp=u0, nondim_length=l, \
+                                                  nondim_mat_param=lambd, u_ana=ua)
+    
     # calculate solution
-    u_hat = solve_cauchy_elasticity(N=N, dom=domain, boundary_conditions=bc, body_forces=b, material_parameters=(lambd, mu),\
-                                    nondim_disp=u0, nondim_length=l, nondim_mat_param=lambd, plot_disp=False, \
-                                    measure_time=False, compute_error=True, u_ana=ua)
+    u_hat_dimless = solve_cauchy_elasticity(N=N, dom=dom_dimless, boundary_conditions=bc_dimless, body_forces=body_forces_dimless, \
+                                    material_parameters=material_parameters_dimless, measure_time=False, compute_error=True, u_ana=u_ana_dimless)
+    
+    # get dimensionfull values
+    u_hat = get_dimensionful_values(u_hat_dimless=u_hat_dimless, boundary_conditions=bc, nondim_disp=u0, nondim_length=l)
+    
     # calculate stresses
-    T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat, plot=False)
+    T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat)
     
     # save displacement as png
     save_disp_figure(u_hat, multiplier=5.0)

@@ -60,8 +60,6 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     v = TestFunction(V)
     
     # matrices
-    matrices = []
-    
     A = inner(mu*grad(u), grad(v))
     
     if only_dirichlet_bcs:
@@ -138,6 +136,10 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
                 file.write(str(N) + ' ' + str(math.sqrt(error)) + '\n')
                 
     return u_hat
+
+
+
+
 
 def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
                             measure_time=False, compute_error=False, u_ana=None):

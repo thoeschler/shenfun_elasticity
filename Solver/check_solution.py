@@ -17,10 +17,12 @@ def check_solution_cauchy(u_hat, material_parameters, body_forces):
     lhs = (lambd + mu)*grad(div(u_hat)) + mu*div(grad(u_hat))
     
     # space for volumetric forces
-    bases = [FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
+    tens_space = tuple(
+        [FunctionSpace(N=u_hat.function_space().spaces[i].bases[i].N, \
                                    domain=u_hat.function_space().spaces[i].bases[i].domain, \
                                        family='legendre', bc=None) for i in range(dim)]
-    T = TensorProductSpace(comm, tuple(bases))
+            )
+    T = TensorProductSpace(comm, tens_space)
     V = VectorSpace([T, T])
     
     # test solution using lame-navier-equation
