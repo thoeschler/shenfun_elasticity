@@ -11,8 +11,23 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
     dom_dimless = tuple([tuple([dom[i][j]/nondim_length for j in range(2)]) for i in  range(dim)])
     
     # dimensionless material_parameters
-    lambd = material_parameters[0]/nondim_mat_param
-    mu = material_parameters[1]/nondim_mat_param
+    if len(material_parameters) == 2: # cauchy elasticity
+        lambd = material_parameters[0]/nondim_mat_param
+        mu = material_parameters[1]/nondim_mat_param
+        # wrap material parameters in a tuple
+        material_parameters_dimless = (lambd, mu)
+    elif len(material_parameters) == 7:
+        lambd = material_parameters[0]/nondim_mat_param
+        mu = material_parameters[1]/nondim_mat_param
+        c1 = material_parameters[2]/nondim_mat_param/nondim_length**2
+        c2 = material_parameters[3]/nondim_mat_param/nondim_length**2
+        c3 = material_parameters[4]/nondim_mat_param/nondim_length**2
+        c4 = material_parameters[5]/nondim_mat_param/nondim_length**2
+        c5 = material_parameters[6]/nondim_mat_param/nondim_length**2
+        # wrap material parameters in a tuple
+        material_parameters_dimless = (lambd, mu, c1, c2, c3, c4, c5)
+    else:
+        raise NotImplementedError()
     
     # assign bc type to each boundary condition
     def assign_bc_type(bc):
@@ -104,10 +119,11 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
         u_ana_dimless= tuple(ua)
         
         # return u_ana_dimless as well
-        return dom_dimless, boundary_conditions_dimless, body_forces_dimless, (lambd, mu), u_ana_dimless
-        
+        return dom_dimless, boundary_conditions_dimless, body_forces_dimless, \
+            material_parameters_dimless, u_ana_dimless
     else: # no analytical solution
-        return dom_dimless, boundary_conditions_dimless, body_forces_dimless, (lambd, mu)
+        return dom_dimless, boundary_conditions_dimless, body_forces_dimless, \
+            material_parameters_dimless
 
 
 def get_dimensionful_values(u_hat_dimless, boundary_conditions, nondim_disp, nondim_length):
