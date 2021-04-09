@@ -53,14 +53,14 @@ for z in range(30, 32, 2):
     # calculate stresses
     T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat)
     T3 = hyper_stresses(material_parameters=(c1, c2, c3, c4, c5), u_hat=u_hat)
+#    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
+#    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
     
     # save displacement as png
     save_disp_figure(u_hat, multiplier=5.0)
-    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
-    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
     
     # save stresses as png
     save_cauchy_stress(T)
     save_hyper_stress(T3)
-    save_traction_vector_gradient(t_upper_lower, (0., 1.))
-    save_traction_vector_gradient(t_left_right, (1., 0.))
+#    save_traction_vector_gradient(t_upper_lower, (0., 1.))
+#    save_traction_vector_gradient(t_left_right, (1., 0.))
