@@ -7,6 +7,35 @@ from math import sqrt
 
 def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
                             measure_time=False, compute_error=False, u_ana=None):
+    '''
+    Solve problems in linear Cauchy elasticity using shenfun. 
+
+    Parameters
+    ----------
+    N : int
+        Size of discretization.
+    dom : tuple
+        Reference domain.
+    boundary_conditions : tuple
+        Boundary conditions of boundary value problem.
+    body_forces : tuple
+        Volumetric forces as sympy expression.
+    material_parameters : tuple
+        Lamé-parameters: (lambd, mu).
+    measure_time : bool, optional
+        If True, computation time is being measured. The default is False.
+    compute_error : bool, optional
+        If True, two different errors are being computed. The default is False.
+    u_ana : tuple, optional
+        Analytical solution as sympy Expr. Needs to be specified only if 
+        an analytical solution is known. The default is None.
+
+    Returns
+    -------
+    u_hat : shenfun Function
+        Solution of boundary value problem in spectral space.
+
+    '''
     # assert input
     assert isinstance(N, int)
     assert isinstance(dom, tuple)
@@ -48,11 +77,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     V = VectorSpace(vec_space)
     
     # body_forces on quadrature points
-    tens_space = tuple([
-        FunctionSpace(N, domain=dom[i], family='legendre', bc=None) for i in range(dim)
-        ])
-    T = TensorProductSpace(comm, tens_space)
-    V_none = VectorSpace([T, T])
+    V_none = V.get_orthogonal()
     body_forces_quad = Array(V_none, buffer=body_forces)
     
     # test and trial functions
@@ -134,11 +159,36 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     return u_hat
 
 
-
-
-
 def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
                             measure_time=False, compute_error=False, u_ana=None):
+    '''
+    Solve problems in linear second order gradient elasticity using shenfun. 
+
+    Parameters
+    ----------
+    N : int
+        Size of discretization.
+    dom : tuple
+        Reference domain.
+    boundary_conditions : tuple
+        Boundary conditions of boundary value problem.
+    body_forces : tuple
+        Volumetric forces as sympy expression.
+    material_parameters : tuple
+        Lamé-parameters: (lambd, mu, c1, c2, c3, c4, c5).
+    measure_time : bool, optional
+        If True, computation time is being measured. The default is False.
+    compute_error : bool, optional
+        If True, two different errors are being computed. The default is False.
+    u_ana : tuple, optional
+        Analytical solution as sympy Expr. Needs to be specified only if 
+        an analytical solution is known. The default is None.
+
+    Returns
+    -------
+    u_hat : shenfun Function
+        Solution of boundary value problem in spectral space.
+    '''
     
     # assert input
     assert isinstance(N, int)
@@ -186,11 +236,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     V = VectorSpace(vec_space)
     
     # body_forces on quadrature points
-    tens_space = tuple([
-        FunctionSpace(N, domain=dom[i], family='legendre', bc=None) for i in range(dim)
-        ])
-    T = TensorProductSpace(comm, tens_space)
-    V_none = VectorSpace([T, T])
+    V_none = V.get_orthogonal()
     body_forces_quad = Array(V_none, buffer=body_forces)
     
     # test and trial functions
