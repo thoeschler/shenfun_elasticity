@@ -3,7 +3,7 @@ from math import sqrt
 
 def check_solution_cauchy(u_hat, material_parameters, body_forces):
     '''
-    Check wheter the numerically computed solution fulfills the Lamé-Navier equation.
+    Check whether the numerically computed solution fulfills the Lamé-Navier equation.
     
     Parameters
     ----------
@@ -51,7 +51,7 @@ def check_solution_cauchy(u_hat, material_parameters, body_forces):
 
 def check_solution_gradient(u_hat, material_parameters, body_forces):
     '''
-    Check wheter the numerically computed solution fulfills the 
+    Check whether the numerically computed solution fulfills the 
     balance of linear momentum for linear gradient elasticity.
     
     Parameters

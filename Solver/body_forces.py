@@ -1,7 +1,23 @@
 from sympy import symbols
 
 def body_forces_cauchy(u, material_parameters):
-    
+    '''
+    Compute body forces via given displacement field 
+    for linear Cauchy elasticity.
+
+    Parameters
+    ----------
+    u : tuple
+        Displacement field as sympy expression.
+    material_parameters : tuple or list
+        Lamé-parameters: (lambd, mu).
+
+    Returns
+    -------
+    body_forces
+        Volumetric forces as sympy expression.
+
+    '''
     # assert inputs
     assert isinstance(u, tuple)
     assert isinstance(material_parameters, tuple)
@@ -34,15 +50,31 @@ def body_forces_cauchy(u, material_parameters):
             Laplace[i] += u[i].diff(coord[j], 2)
             
     # compute body forces
-    body_forces = []
-    for i in range(dim):
-        body_forces.append(- ( (lambd + mu)*GradDiv[i] + mu*Laplace[i] ))
+    body_forces = tuple([
+           - ( (lambd + mu)*GradDiv[i] + mu*Laplace[i] ) for i in range(dim)
+        ])
         
     return tuple(body_forces)
 
 
-
 def body_forces_gradient(u, material_parameters):   
+    '''
+    Compute body forces via given displacement field 
+    for linear second order gradient elasticity.
+
+    Parameters
+    ----------
+    u : tuple
+        Displacement field as sympy expression.
+    material_parameters : tuple or list
+        Lamé-parameters: (lambd, mu, c1, c2, c3, c4, c5).
+
+    Returns
+    -------
+    body_forces
+        Volumetric forces as sympy expression.
+
+    '''
     # assert input
     assert isinstance(u, tuple)
     assert isinstance(material_parameters, tuple)
@@ -93,9 +125,9 @@ def body_forces_gradient(u, material_parameters):
         GradDivDivGrad[i] = DivDivGrad.diff(coord[i])
     
     # body forces
-    body_forces = []
-    for i in range(dim):
-        body_forces.append((c1 + c4)*DoubleLaplace[i] + (c2 + c3 + c5)*GradDivDivGrad[i] \
-                           - (lambd + mu)*GradDiv[i] - mu*Laplace[i])
-        
+    body_forces = tuple([
+            (c1 + c4)*DoubleLaplace[i] + (c2 + c3 + c5)*GradDivDivGrad[i] \
+                           - (lambd + mu)*GradDiv[i] - mu*Laplace[i]
+        ])
+
     return tuple(body_forces)

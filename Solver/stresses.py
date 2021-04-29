@@ -1,7 +1,22 @@
 from shenfun import FunctionSpace, VectorSpace, TensorProductSpace, Function, project, Dx, comm
 
 def cauchy_stresses(material_parameters, u_hat):
-    
+    '''
+    Compute components of Cauchy stress tensor.
+
+    Parameters
+    ----------
+    material_parameters : tuple or list
+        Lamé-parameters: (lambd, mu).
+    u_hat : shenfun Function
+        Displacement field in spectral space.
+
+    Returns
+    -------
+    T : list
+        Cauchy stress Tensor in spectral space.
+
+    '''
     # input assertion
     assert isinstance(material_parameters, tuple)
     for val in material_parameters:
@@ -54,7 +69,23 @@ def cauchy_stresses(material_parameters, u_hat):
     return T
 
 
-def hyper_stresses(material_parameters, u_hat):    
+def hyper_stresses(material_parameters, u_hat):
+    '''
+    Compute components of hyper stress tensor.
+
+    Parameters
+    ----------
+    material_parameters : tuple or list
+        (c1, c2, c3, c4, c5).
+    u_hat : shenfun Function
+        Displacement field in spectral space.
+
+    Returns
+    -------
+    T : list
+        Hyper stress Tensor in spectral space.
+
+    '''
     # input assertion
     assert isinstance(material_parameters, tuple)
     for val in material_parameters:
@@ -67,9 +98,9 @@ def hyper_stresses(material_parameters, u_hat):
 
     dim = len(V.spaces)
     N = V.spaces[0].bases[0].N
-    dom = []
-    for i in range(len(V.spaces[0])):
-        dom.append(V.spaces[0].bases[i].domain)
+    dom = tuple([
+            V.spaces[0].bases[i].domain for i in range(dim)
+        ])
     c1 = material_parameters[0]
     c2 = material_parameters[1]
     c3 = material_parameters[2]
@@ -119,9 +150,25 @@ def hyper_stresses(material_parameters, u_hat):
 
     return T
 
-
-
 def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector):
+    '''
+    Compute traction vector for linear second order gradient elasticity.
+
+    Parameters
+    ----------
+    cauchy_stresses : list
+        Components of Cauchy stress tensor in spectral space.
+    hyper_stresses : list
+        Components of hyper stress tensor in spectral space.
+    normal_vector : tuple
+        Normal vector used to compute the traction.
+
+    Returns
+    -------
+    t : list
+        Traction vector in spectral space.
+
+    '''
     # some paramaters
     dim = len(normal_vector)
     T2 = cauchy_stresses

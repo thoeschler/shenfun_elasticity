@@ -3,7 +3,49 @@ from shenfun import comm, FunctionSpace, TensorProductSpace, VectorSpace, Functi
 
 def get_dimensionless_values(dom, boundary_conditions, body_forces, material_parameters, \
                             nondim_disp, nondim_length, nondim_mat_param, u_ana=None):
-    
+    '''
+    Get dimensionless domain, boundary conditions, body forces and 
+    material parameters for boundary value problems in Cauchy and 
+    linear second order gradient elasticity.
+
+    Parameters
+    ----------
+    dom : tuple
+        Physical domain.
+    boundary_conditions : tuple
+        Boundary conditions of boundary value problem.
+    body_forces : tuple
+        Volumetric forces as sympy expression.
+    material_parameters : tuple or list
+        - for Cauchy elasticity: Lamé-parameters (lambda, mu)
+        - for gradient elasticity: (lambda, mu, c1, c2, c3, c4, c5).
+    nondim_disp : float
+        Reference displacement value used to get dimensionless
+        volumetric forces.
+    nondim_length : float
+        Reference length used to get dimensionless domain, volumetric 
+        forces and material parameters (for gradient elasticity).
+    nondim_mat_param : float
+        Reference material parameter in MPa, e.g. one of the Lamé-
+        parameters.
+    u_ana : tuple, optional
+        Analytical solution as sympy expression. Needs to be specified
+        only if analytical solution is known. The default is None.
+
+    Raises
+    ------
+    NotImplementedError
+        Length of tuple or list containing material parameters has to
+        be 2 (Cauchy elasticity) or 7 (gradient elasticity).
+
+    Returns
+    -------
+    dom_dimless, boundary_conditions_dimless, body_forces_dimless, \
+            material_parameters_dimless, u_ana_dimless
+        Dimensionless domain, boundary conditions, volumetric forces
+        and material parameters. Dimensionless analytical solution is
+        returned only if u_ana is not None.
+    '''
     # some parameters
     dim = len(dom)
     
@@ -127,6 +169,27 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
 
 
 def get_dimensionful_values(u_hat_dimless, boundary_conditions, nondim_disp, nondim_length):
+    '''
+    Get dimensionful values after solving the dimensionless
+    boundary value problem.
+
+    Parameters
+    ----------
+    u_hat_dimless : shenfun Function
+        Displacement field in spectral space (expansion coefficients).
+    boundary_conditions : tuple
+        Boundary conditions of dimensionful problem.
+    nondim_disp : float
+        Reference displacement value used to get dimensionful displacement.
+    nondim_length : float
+        Reference length used to get physical domain.
+
+    Returns
+    -------
+    u_hat : shenfun Function
+        Dimensionful displacement field in spectral space.
+
+    '''
     # get size of discretization
     N = u_hat_dimless.function_space().spaces[0].bases[0].N
     
