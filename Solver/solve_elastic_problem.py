@@ -3,7 +3,7 @@ from shenfun import VectorSpace, TensorProductSpace, Array, TrialFunction, TestF
 from shenfun.legendre.bases import ShenDirichlet, ShenBiharmonic
 from .check_solution import check_solution_cauchy, check_solution_gradient
 import time
-import math
+from math import sqrt
 
 def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
                             measure_time=False, compute_error=False, u_ana=None):
@@ -121,19 +121,15 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
         with open('N_errorLameNavier.dat', 'a') as file:
                 file.write(str(N) + ' ' + str(error) + '\n')
         if u_ana is not None:
-            # error
-            error_array = Array(V, buffer=u_ana) # evaluate u_ana at quadrature points
-            for i in range(dim):
-                error_array[i] -= project(u_hat[i], V.spaces[i]).backward()
-    
-            for i in range(dim):
-                for j in range(len(error_array[i])):
-                    for k in range(len(error_array[i][j])):
-                        error_array[i][j][k] = error_array[i][j][k]**2
-            error = inner((1, 1), error_array)
+            # evaluate u_ana at quadrature points
+            error_array = Array(V, buffer=u_ana)
+            # subtract numerical solution
+            error_array -= project(u_hat, V).backward()
+            # compute integral error
+            error = sqrt(inner((1, 1), error_array**2))
             
             with open('N_error_u_ana.dat', 'a') as file:
-                file.write(str(N) + ' ' + str(math.sqrt(error)) + '\n')
+                file.write(str(N) + ' ' + str(error) + '\n')
                 
     return u_hat
 
@@ -305,18 +301,14 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
         with open('N_errorBalanceLinMom.dat', 'a') as file:
                 file.write(str(N) + ' ' + str(error) + '\n')
         if u_ana is not None:
-            # error
-            error_array = Array(V, buffer=u_ana) # evaluate u_ana at quadrature points
-            for i in range(dim):
-                error_array[i] -= project(u_hat[i], V.spaces[i]).backward()
-    
-            for i in range(dim):
-                for j in range(len(error_array[i])):
-                    for k in range(len(error_array[i][j])):
-                        error_array[i][j][k] = error_array[i][j][k]**2
-            error = inner((1, 1), error_array)
+            # evaluate u_ana at quadrature points
+            error_array = Array(V, buffer=u_ana)
+            # subtract numerical solution
+            error_array -= project(u_hat, V).backward()
+            # compute integral error
+            error = sqrt(inner((1, 1), error_array**2))
             
             with open('N_error_u_ana.dat', 'a') as file:
-                file.write(str(N) + ' ' + str(math.sqrt(error)) + '\n')
-
+                file.write(str(N) + ' ' + str(error) + '\n')
+            
     return u_hat
