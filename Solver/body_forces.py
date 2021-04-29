@@ -54,7 +54,7 @@ def body_forces_cauchy(u, material_parameters):
            - ( (lambd + mu)*GradDiv[i] + mu*Laplace[i] ) for i in range(dim)
         ])
         
-    return tuple(body_forces)
+    return body_forces
 
 
 def body_forces_gradient(u, material_parameters):   
@@ -130,4 +130,4 @@ def body_forces_gradient(u, material_parameters):
                            - (lambd + mu)*GradDiv[i] - mu*Laplace[i]
         ])
 
-    return tuple(body_forces)
+    return body_forces
