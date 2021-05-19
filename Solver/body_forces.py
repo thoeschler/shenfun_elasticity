@@ -127,7 +127,7 @@ def body_forces_gradient(u, material_parameters):
     # body forces
     body_forces = tuple([
             (c1 + c4)*DoubleLaplace[i] + (c2 + c3 + c5)*GradDivDivGrad[i] \
-                           - (lambd + mu)*GradDiv[i] - mu*Laplace[i]
+            - (lambd + mu)*GradDiv[i] - mu*Laplace[i] for i in range(dim)
         ])
 
     return body_forces
