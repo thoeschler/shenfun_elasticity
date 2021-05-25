@@ -1,4 +1,4 @@
-from shenfun import FunctionSpace, VectorSpace, TensorProductSpace, Function, project, Dx, comm
+from shenfun import Function, project, Dx
 
 def cauchy_stresses(material_parameters, u_hat):
     '''
@@ -25,21 +25,11 @@ def cauchy_stresses(material_parameters, u_hat):
     assert isinstance(u_hat, Function)
     
     # some parameters
-    V = u_hat.function_space()
-    dim = len(V.spaces)
-    N = V.spaces[0].bases[0].N
-    dom = tuple([
-        V.spaces[i].bases[i].domain for i in range(dim)
-        ])
+    T_none = u_hat[0].function_space().get_orthogonal()
+    dim = len(T_none.bases)
 
     lambd = material_parameters[0]
     mu = material_parameters[1]
-    
-    # space for stresses
-    tens_space = tuple([
-        FunctionSpace(N, family='legendre', domain=dom[i], bc=None) for i in range(dim)
-        ])
-    T_none = TensorProductSpace(comm, tens_space)
     
     # displacement gradient
     H = [ [None for _ in range(dim)] for _ in range(dim)]
@@ -94,24 +84,15 @@ def hyper_stresses(material_parameters, u_hat):
     assert isinstance(u_hat, Function)
     
     # some parameters
-    V = u_hat.function_space()
+    T_none = u_hat[0].function_space()
 
-    dim = len(V.spaces)
-    N = V.spaces[0].bases[0].N
-    dom = tuple([
-            V.spaces[0].bases[i].domain for i in range(dim)
-        ])
+    dim = len(T_none.bases)
+ 
     c1 = material_parameters[0]
     c2 = material_parameters[1]
     c3 = material_parameters[2]
     c4 = material_parameters[3]
     c5 = material_parameters[4]
-    
-    # space for stresses
-    tens_space = tuple([
-        FunctionSpace(N, family='legendre', domain=dom[i], bc=None) for i in range(dim)
-        ])
-    T_none = TensorProductSpace(comm, tens_space)
     
     # Laplace
     Laplace = [0. for _ in range(dim)]
