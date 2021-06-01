@@ -353,8 +353,10 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
             error_array -= project(u_hat, V).backward()
             # compute integral error
             error = sqrt(inner((1, 1), error_array**2))
+            # scale by magnitude of solution
+            scale = sqrt(inner(u_hat, u_hat))
             
             with open('N_error_u_ana.dat', 'a') as file:
-                file.write(str(N) + ' ' + str(error) + '\n')
+                file.write(str(N) + ' ' + str(error/scale) + '\n')
             
     return u_hat
