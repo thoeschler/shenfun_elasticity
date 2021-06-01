@@ -81,11 +81,10 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
         elif isinstance(bc, tuple):
             # dirichlet-bcs are given as tuple
             return 'DIRICHLET'
-        elif isinstance(bc, list):
-            # mixed inhomogeneous bcs are given as list
-            return 'MIXED_INHOM'
-        else:
-            raise NotImplementedError() 
+        elif isinstance(bc, dict):
+            # all bcs can be defined via a dictionary
+            return 'ARBITRARY'
+        raise NotImplementedError() 
 
 
     # dimensionless boundary conditions
@@ -103,12 +102,15 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
                 # dimensionless bc
                 bc_dimless = []
                 for component in bc: # coordinate transformation for each component
-                    if isinstance(component, sympy.Expr): # coordinate transformation
-                        for coord in component.free_symbols:
-                            component = component.replace(
-                                coord, coord*nondim_length
+                    if component is not None:
+                        if isinstance(component, sympy.Expr): # coordinate transformation
+                            for coord in component.free_symbols:
+                                component = component.replace(
+                                    coord, coord*nondim_length
                             )
-                    bc_dimless.append(component / nondim_disp)
+                        bc_dimless.append(component / nondim_disp)
+                    else:
+                        bc_dimless.append(component)
                 # append to bcs_comp_dimless
                 bcs_comp_dimless.append(tuple(bc_dimless))
             
@@ -116,20 +118,38 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
                 # nothing to change here
                 bcs_comp_dimless.append(bc)
                 
-            elif bc_type == 'MIXED_INHOM':
-                assert isinstance(bc[0], str)
-                assert isinstance(bc[1], tuple) # inhomogeneous bcs are given in tuple
-                bc_dimless = [] 
-                for component in bc[1]:
-                    if isinstance(component, sympy.Expr): # coordinate transformation
-                        for coord in component.free_symbols:
-                            component = component.replace(
-                                coord, coord*nondim_length
+            elif bc_type == 'ARBITRARY':
+                bc_dimless = dict()
+                
+                assert isinstance(bc, dict)
+                for side, condition in bc.items():
+                    assert side in ('left', 'right')
+                    bc_dimless[side] = [] # initialize value with empty list
+                    
+                    for kind, val in condition:
+                        if isinstance(val, sympy.Expr):
+                            for coord in val.free_symbols:
+                                val = val.replace(
+                                        coord, coord*nondim_length
+                                        )
+                        if kind == 'D': # dirichlet bc
+                            bc_dimless[side].append(
+                                    ('D', val/nondim_disp)
                                 )
-                    # append dimensionless components to list
-                    bc_dimless.append(component / nondim_disp)
+                        elif kind == 'N': # neumann bc
+                            bc_dimless[side].append(
+                                    ('N', val / nondim_disp * nondim_length)
+                                )
+                        elif kind == 'N2': # second deivative
+                            bc_dimless[side].append(
+                                    ('N2', val / nondim_disp * nondim_length**2)
+                                )
+                        elif kind == 'N3': # third derivative
+                            bc_dimless[side].append(
+                                    ('N3', val / nondim_disp * nondim_length**3)
+                                )         
                 # append dimensionless bcs to list
-                bcs_comp_dimless.append([bc[0], tuple(bc_dimless)]) # change tuple, leave str as it is
+                bcs_comp_dimless.append(bc_dimless) # change tuple, leave str as it is
                 
             else:
                 raise NotImplementedError()
@@ -217,6 +237,6 @@ def get_dimensionful_values(u_hat_dimless, boundary_conditions, nondim_disp, non
     u_hat = Function(V)
         
     for i in range(dim):
-        u_hat[i] = u_hat_dimless[i] # u has the same expansions coefficients as u_hat
+        u_hat[i] = nondim_disp*u_hat_dimless[i] # u has the same expansions coefficients as u_hat
             
     return u_hat
