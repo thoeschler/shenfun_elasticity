@@ -87,20 +87,20 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     # matrices
     A = inner(mu*grad(u), grad(v))
     
-#    if only_dirichlet_bcs:
-#        B = inner((lambd + mu)*div(u), div(v))
-#        matrices = A + B
-#    else:
-    B = []
-    for i in range(dim):
-        for j in range(dim):
-            temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
-            if isinstance(temp, list):
-                B += temp
-            else:
-                B += [temp]
-    C = inner(lambd*div(u), div(v))
-    matrices = A + B + C
+    if only_dirichlet_bcs:
+        B = inner((lambd + mu)*div(u), div(v))
+        matrices = A + B
+    else:
+        B = []
+        for i in range(dim):
+            for j in range(dim):
+                temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
+                if isinstance(temp, list):
+                    B += temp
+                else:
+                    B += [temp]
+        C = inner(lambd*div(u), div(v))
+        matrices = A + B + C
     
     # right hand side of the weak formulation
     b = inner(v, body_forces_quad)
@@ -246,17 +246,10 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     # matrices
     matrices = []
     
-    A = []
     if c1 != 0.0:
         A = inner(c1*div(grad(u)), div(grad(v)))
-        # for i in range(dim):
-        #     for j in range(dim):
-        #         for k in range(dim):
-        #             temp = inner(c1*Dx(Dx(u[i], j), k), Dx(Dx(v[i], j), k)) # works somehow (dirichlet-bcs)
-        #             if isinstance(temp, list):
-        #                 A += temp
-        #             else:
-        #                 A += [temp]
+    else:
+        A = []
     if c2 != 0.0:
         B = inner(c2*div(grad(u)), grad(div(v)))
     else:
@@ -354,7 +347,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
             # compute integral error
             error = sqrt(inner((1, 1), error_array**2))
             # scale by magnitude of solution
-            scale = sqrt(inner(u_hat, u_hat))
+            scale = sqrt(inner((1, 1), u_hat.backward()**2))
             
             with open('N_error_u_ana.dat', 'a') as file:
                 file.write(str(N) + ' ' + str(error/scale) + '\n')

@@ -44,7 +44,7 @@ def check_solution_cauchy(u_hat, material_parameters, body_forces):
     # compute integral error
     error = sqrt(inner((1, 1), error_array**2))
     # scale by magnitude of solution
-    scale = sqrt(inner(u_hat, u_hat))
+    scale = sqrt(inner((1, 1), u_hat.backward()**2))
     
     return error/scale
     
@@ -94,11 +94,11 @@ def check_solution_gradient(u_hat, material_parameters, body_forces):
     
     # evaluate volumetric forces at quadrature points (physical space)
     error_array = Array(V, buffer=body_forces)  
-    
     # add left hand side of the Lamé-Navier equation
     error_array += project(lhs, V).backward()
-    
     # compute integral error
     error = sqrt(inner((1, 1), error_array**2))
+    # scale by magnitude of solution
+    scale = sqrt(inner(u_hat, u_hat))
     
-    return error
+    return error/scale
