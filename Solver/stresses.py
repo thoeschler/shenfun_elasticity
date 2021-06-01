@@ -1,4 +1,4 @@
-from shenfun import Function, project, Dx
+from shenfun import Function, project, Dx, VectorSpace
 
 def cauchy_stresses(material_parameters, u_hat):
     '''
@@ -27,7 +27,7 @@ def cauchy_stresses(material_parameters, u_hat):
     # some parameters
     T_none = u_hat[0].function_space().get_orthogonal()
     dim = len(T_none.bases)
-
+    
     lambd = material_parameters[0]
     mu = material_parameters[1]
     
@@ -55,7 +55,7 @@ def cauchy_stresses(material_parameters, u_hat):
             T[i][j] = 2.0 * mu * E[i][j] 
             if i==j:
                 T[i][j] += lambd * trE
-
+            
     return T
 
 

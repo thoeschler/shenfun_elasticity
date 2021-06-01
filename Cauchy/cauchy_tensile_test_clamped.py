@@ -2,10 +2,7 @@ from shenfun_elasticity.Solver.stresses import cauchy_stresses
 from shenfun_elasticity.Solver.solve_elastic_problem import solve_cauchy_elasticity
 from shenfun_elasticity.Solver.plot_template import save_disp_figure, save_cauchy_stress
 from shenfun_elasticity.Solver.change_dimensions import get_dimensionless_values, get_dimensionful_values
-from sympy import symbols
 
-# some parameters
-x, y = symbols("x,y")
 # computational domain
 l = 100.
 h = l/2
@@ -13,7 +10,7 @@ domain_x = (0, l)
 domain_y = (0, h)
 domain = (domain_x, domain_y)
 # Verschiebungswert
-u0 = 1.0
+u0 = 1.
 # elastic constants
 E = 400. # Young's modulus
 nu = 0.4 # Poisson's ratio
@@ -22,9 +19,11 @@ mu = E/(2*(1+nu))
 # body forces
 body_forces = (0., 0.)
 # boundary conditions
-bc = (((0, 1), None), ((0, 0), None))
+bc = (((0, u0), None), ((0, 0), None))
+
+#bc = (((0., u0), None), (None, (None, 0.)))
 # size of discretization
-for z in range(30, 32, 2):
+for z in range(10, 32, 2):
     # size of discretization
     N = z
     
@@ -43,12 +42,13 @@ for z in range(30, 32, 2):
     
     # get dimensionfull values
     u_hat = get_dimensionful_values(
-        u_hat_dimless=u_hat_dimless, boundary_conditions=bc, nondim_disp=u0, nondim_length=l
+        u_hat_dimless=u_hat_dimless, boundary_conditions=bc, 
+        nondim_disp=u0, nondim_length=l
         )
     
     # calculate stresses
     T = cauchy_stresses(material_parameters=(lambd, mu), u_hat=u_hat)
-    
+                
     # save displacement as png
     save_disp_figure(u_hat, multiplier=5.0)
     

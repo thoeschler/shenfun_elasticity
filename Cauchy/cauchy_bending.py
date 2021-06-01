@@ -21,7 +21,7 @@ body_forces = (0., 0.)
 # boundary conditions
 bc = (('lowerdirichlet', None), ((0, -u0), None))
 # size of discretization
-for z in range(30, 32, 2):
+for z in range(10, 41, 2):
     # size of discretization
     N = z
     

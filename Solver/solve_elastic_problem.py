@@ -87,20 +87,20 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     # matrices
     A = inner(mu*grad(u), grad(v))
     
-    if only_dirichlet_bcs:
-        B = inner((lambd + mu)*div(u), div(v))
-        matrices = A + B
-    else:
-        B = []
-        for i in range(dim):
-            for j in range(dim):
-                    temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
-                    if isinstance(temp, list):
-                        B += temp
-                    else:
-                        B += [temp]
-        C = inner(lambd*div(u), div(v))
-        matrices = A + B + C
+#    if only_dirichlet_bcs:
+#        B = inner((lambd + mu)*div(u), div(v))
+#        matrices = A + B
+#    else:
+    B = []
+    for i in range(dim):
+        for j in range(dim):
+            temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
+            if isinstance(temp, list):
+                B += temp
+            else:
+                B += [temp]
+    C = inner(lambd*div(u), div(v))
+    matrices = A + B + C
     
     # right hand side of the weak formulation
     b = inner(v, body_forces_quad)

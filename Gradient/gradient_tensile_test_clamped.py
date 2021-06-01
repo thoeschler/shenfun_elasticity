@@ -17,11 +17,11 @@ E = 400. # Young's modulus
 nu = 0.4 # Poisson's ratio
 lambd = E*nu/((1+nu)*(1-2*nu))
 mu = E/(2*(1+nu))
-c1 = 0.01
-c2 = 0.01
-c3 = 0.01
-c4 = 0.01
-c5 = 0.01
+c1 = 0.1
+c2 = 0.1
+c3 = 0.1
+c4 = 0.1
+c5 = 0.1
 # body_forces
 body_forces = (0., 0.)
 # boundary conditions
@@ -56,11 +56,11 @@ for z in range(30, 32, 2):
     
     # save displacement as png
     save_disp_figure(u_hat, multiplier=5.0)
-    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
-    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
+#    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
+#    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
     
     # save stresses as png
     save_cauchy_stress(T)
     save_hyper_stress(T3)
-    save_traction_vector_gradient(t_upper_lower, (0., 1.))
-    save_traction_vector_gradient(t_left_right, (1., 0.))
+#    save_traction_vector_gradient(t_upper_lower, (0., 1.))
+#    save_traction_vector_gradient(t_left_right, (1., 0.))

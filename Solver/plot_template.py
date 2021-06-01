@@ -36,17 +36,12 @@ def save_disp_figure(u_hat, multiplier=1.0):
 
 def save_cauchy_stress(T):
     space = T[0][0].function_space()
-    x_, y_ = space.local_mesh()
+    x_, y_ = space.local_mesh(uniform=True)
     X, Y = np.meshgrid(x_, y_, indexing='ij')
     for i in range(len(space.bases)):
         for j in range(len(space.bases)):
             # stress component in physical space
-            stress = T[i][j].backward()
-            
-            # set axis limits and grid
-            x_, y_ = space.local_mesh(uniform=True)
-            X, Y = np.meshgrid(x_, y_, indexing='ij')
-            
+            stress = T[i][j].backward(kind='uniform')
             # plot
             fig, ax = plt.subplots(figsize=(6, 4), tight_layout=True)
             ax.set_xlim(space.bases[0].domain[0], space.bases[0].domain[1])
@@ -62,13 +57,13 @@ def save_cauchy_stress(T):
             
 def save_hyper_stress(T3):
     space = T3[0][0][0].function_space()
-    x_, y_ = space.local_mesh()
+    x_, y_ = space.local_mesh(uniform=True)
     X, Y = np.meshgrid(x_, y_, indexing='ij')
     for i in range(len(space.bases)):
         for j in range(len(space.bases)):
             for k in range(len(space.bases)):
                 # stress component in physical space
-                stress = T3[i][j][k].backward()
+                stress = T3[i][j][k].backward(kind='uniform')
 
                 # plot
                 fig, ax = plt.subplots(figsize=(6, 4), tight_layout=True)

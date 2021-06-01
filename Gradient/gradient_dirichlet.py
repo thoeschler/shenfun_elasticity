@@ -15,27 +15,28 @@ domain_x = (0, l)
 domain_y = (0, h)
 domain = (domain_x, domain_y)
 # displacement value
-u0 = 0.1
+u0 = 1
 # manufactured solution
-ua = (u0*(50*(1-x/l)**2*(x/l)**2*(y/h)**2*(1-y/h)**2*sin(2*pi*x/l)*cos(3*pi*y/h) + 16*(1-y/h)**2*(y/h)**2*(3*(x/l)**2 - 2*(x/l)**3)), u0*50*(1-x/l)**2*(x/l)**2*(y/h)**2*(1-y/h)**2*sin(2*pi*y/h)*cos(3*pi*x/l))
+ua = (u0*(50*(1-x/l)**2*(x/l)**2*(y/h)**2*(1-y/h)**2*sin(2*pi*x/l)*cos(3*pi*y/h) + 16*(1-y/h)**2*(y/h)**2*(3*(x/l)**2 - 2*(x/l)**3)), \
+      u0*50*(1-x/l)**2*(x/l)**2*(y/h)**2*(1-y/h)**2*sin(2*pi*y/h)*cos(3*pi*x/l))
 # + 16*(1-y/h)**2*(y/h)**2*(3*(x/l)**2 - 2*(x/l)**3)
 # elastic constants
 E = 400. # Young's modulus
 nu = 0.4 # Poisson's ratio
 lambd = E*nu/((1+nu)*(1-2*nu))
 mu = E/(2*(1+nu))
-c1 = 0.01
-c2 = 0.01
-c3 = 0.01
-c4 = 0.01
-c5 = 0.01
+c1 = 0.1
+c2 = 0.1
+c3 = 0.1
+c4 = 0.1
+c5 = 0.1
 # body forces
 body_forces = body_forces_gradient(u=ua, material_parameters=(lambd, mu, c1, c2, c3, c4, c5))
 # boundary conditions
 bc = (((0, u0*16*(1-y/h)**2*(y/h)**2, 0, 0), (0, 0, 0, 0)), ((0, 0, 0, 0), (0, 0, 0, 0)))
 #bc = (((0, 0, 0, 0), (0, 0, 0, 0)), ((0, 0, 0, 0), (0, 0, 0, 0)))
 # size of discretization
-for z in range(30, 31, 2):
+for z in range(10, 41, 2):
     # size of discretization
     N = z
 

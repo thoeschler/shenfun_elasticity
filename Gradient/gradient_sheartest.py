@@ -11,7 +11,7 @@ domain_x = (0, l)
 domain_y = (0, h)
 domain = (domain_x, domain_y)
 # displacement value
-u0 = -1.
+u0 = 1.
 # elastic constants
 E = 400. # Young's modulus
 nu = 0.4 # Poisson's ratio
@@ -25,7 +25,7 @@ c5 = 0.01
 # body forces
 body_forces = (0., 0.)
 # boundary conditions
-bc = ((None, ['sheartest', (0, u0, 0)]), (None, (0, 0)))
+bc = ((None, {'left': [('D', u0), ('N', 0)], 'right': [('D', 0)]}), (None, (0, 0)))
 # size of discretization
 for z in range(30, 32, 2):
     # size of discretization
@@ -37,7 +37,7 @@ for z in range(30, 32, 2):
             material_parameters=(lambd, mu, c1, c2, c3, c4, c5), nondim_disp=u0, nondim_length=l, \
             nondim_mat_param=lambd
             )
-        
+    print(bc_dimless)
     # calculate solution
     u_hat_dimless = solve_gradient_elasticity(
         N=N, dom=dom_dimless, boundary_conditions=bc_dimless, body_forces=body_forces_dimless, \

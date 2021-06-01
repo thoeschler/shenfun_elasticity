@@ -27,7 +27,7 @@ body_forces = body_forces_cauchy(u=ua, material_parameters=(lambd, mu))
 # boundary conditions
 bc = (((0., u0*4*y/h*(1-y/h)), (0., 0.)), ((0., 0.), (0., 0.)))
 # size of discretization
-for z in range(30, 32, 2):
+for z in range(10, 41, 2):
     # size of discretization
     N = z
     

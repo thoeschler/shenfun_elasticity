@@ -24,7 +24,7 @@ ua = (x/l*u0, nu/(1-nu)*u0/l*(h-y))
 # body forces
 body_forces = (0., 0.)
 # boundary conditions
-bc = (((0., u0), None), (None, 'upperdirichlet'))
+bc = (((0., u0), None), (None, (0., None)))
 # size of discretization
 for z in range(30, 32, 2):
     # size of discretization
