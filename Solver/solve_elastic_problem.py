@@ -1,14 +1,16 @@
-from shenfun import VectorSpace, TensorProductSpace, Array, TrialFunction, TestFunction, inner, grad, div, Dx, \
-    extract_bc_matrices, BlockMatrix, Function, FunctionSpace, project, comm
+from shenfun import VectorSpace, TensorProductSpace, Array, TrialFunction, \
+    TestFunction, inner, grad, div, Dx, extract_bc_matrices, BlockMatrix, \
+    Function, FunctionSpace, project, comm
 from shenfun.legendre.bases import ShenDirichlet, ShenBiharmonic
 from .check_solution import check_solution_cauchy, check_solution_gradient
-import time
 from math import sqrt
 
-def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
-                            measure_time=False, compute_error=False, u_ana=None):
+
+def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
+                            material_parameters, compute_error=False,
+                            u_ana=None):
     '''
-    Solve problems in linear Cauchy elasticity using shenfun. 
+    Solve problems in linear Cauchy elasticity using shenfun.
 
     Parameters
     ----------
@@ -27,7 +29,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     compute_error : bool, optional
         If True, two different errors are being computed. The default is False.
     u_ana : tuple, optional
-        Analytical solution as sympy Expr. Needs to be specified only if 
+        Analytical solution as sympy Expr. Needs to be specified only if
         an analytical solution is known. The default is None.
 
     Returns
@@ -37,7 +39,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
 
     '''
     # assert input
-    assert isinstance(N, int)
+    assert isinstance(N, (tuple, list))
     assert isinstance(dom, tuple)
     assert isinstance(boundary_conditions, tuple)
     assert isinstance(body_forces, tuple)
@@ -45,29 +47,26 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
     assert len(material_parameters) == 2
     if compute_error:
         assert u_ana is None or isinstance(u_ana, tuple)
-    
-    # start time measurement if desired
-    if measure_time:
-        time_start=time.time()
-    
+
     # some parameters
     dim = len(dom)
-    
+
     #  material_parameters
     lambd = material_parameters[0]
     mu = material_parameters[1]
-    
+
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are being applied
     # check if only dirichlet-boundary conditions are being applied
     vec_space = []
     only_dirichlet_bcs = True
     nonhomogeneous_bcs = False
-    
-    for i in range(dim): # nb of displacement components
+
+    for i in range(dim):  # nb of displacement components
         tens_space = []
-        for j in range(dim): # nb of FunctionSpaces for each component
-            basis = FunctionSpace(N, family='legendre', bc=boundary_conditions[i][j], domain=dom[j])
+        for j in range(dim):  # nb of FunctionSpaces for each component
+            basis = FunctionSpace(N[j], family='legendre',
+                                  bc=boundary_conditions[i][j], domain=dom[j])
             tens_space.append(basis)
             if basis.has_nonhomogeneous_bcs:
                 nonhomogeneous_bcs = True
@@ -75,21 +74,30 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
                 only_dirichlet_bcs = False
         vec_space.append(TensorProductSpace(comm, tuple(tens_space)))
     V = VectorSpace(vec_space)
-    
+
     # body_forces on quadrature points
     V_none = V.get_orthogonal()
     body_forces_quad = Array(V_none, buffer=body_forces)
-    
+
     # test and trial functions
     u = TrialFunction(V)
     v = TestFunction(V)
-    
+
     # matrices
     A = inner(mu*grad(u), grad(v))
-    
+
     if only_dirichlet_bcs:
-        B = inner((lambd + mu)*div(u), div(v))
-        matrices = A + B
+        B = []
+        for i in range(dim):
+            for j in range(dim):
+                temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
+                if isinstance(temp, list):
+                    B += temp
+                else:
+                    B += [temp]
+        C = inner(lambd*div(u), div(v))
+        matrices = A + B + C
+
     else:
         B = []
         for i in range(dim):
@@ -101,10 +109,10 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
                     B += [temp]
         C = inner(lambd*div(u), div(v))
         matrices = A + B + C
-    
+
     # right hand side of the weak formulation
     b = inner(v, body_forces_quad)
-    
+
     # solution
     u_hat = Function(V)
     if nonhomogeneous_bcs:
@@ -114,37 +122,35 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
         M = BlockMatrix(matrices)
         # BlockMatrix for inhomogeneous part
         BM = BlockMatrix(bc_mats)
-        
+
         # inhomogeneous part of solution
-        uh_hat = Function(V).set_boundary_dofs()        
-        
+        uh_hat = Function(V).set_boundary_dofs()
+
         # additional part to be passed to the right hand side
         b_add = Function(V)
-        b_add = BM.matvec(-uh_hat, b_add) # negative because added to right hand side
-        
+        # negative because added to right hand side
+        b_add = BM.matvec(-uh_hat, b_add)
+
         # homogeneous part of solution
         u_hat = M.solve(b + b_add)
-        
+
         # solution
         u_hat += uh_hat
     else:
         # BlockMatrix
         M = BlockMatrix(matrices)
-        
+
         # solution
         u_hat = M.solve(b)
-    
-    # measure time if desired
-    if measure_time:
-        time_stop = time.time()
-        with open('N_time.dat', 'a') as file:
-            file.write(str(N) + ' ' + str(time_stop - time_start) + '\n')
-        
+
     # compute error using analytical solution if desired
     if compute_error:
-        error = check_solution_cauchy(u_hat=u_hat, material_parameters=(lambd, mu), body_forces=body_forces)
+        error = check_solution_cauchy(u_hat=u_hat,
+                                      material_parameters=(lambd, mu),
+                                      body_forces=body_forces)
         with open('N_errorLameNavier.dat', 'a') as file:
-                file.write(str(N) + ' ' + str(error) + '\n')
+            file.write(str(N) + ' ' + str(error) + '\n')
+
         if u_ana is not None:
             # evaluate u_ana at quadrature points
             error_array = Array(V, buffer=u_ana)
@@ -152,17 +158,18 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces, material_p
             error_array -= project(u_hat, V).backward()
             # compute integral error
             error = sqrt(inner((1, 1), error_array**2))
-            
+
             with open('N_error_u_ana.dat', 'a') as file:
                 file.write(str(N) + ' ' + str(error) + '\n')
-                
+
     return u_hat
 
 
-def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material_parameters, \
-                            measure_time=False, compute_error=False, u_ana=None):
+def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
+                              material_parameters, compute_error=False,
+                              u_ana=None):
     '''
-    Solve problems in linear second order gradient elasticity using shenfun. 
+    Solve problems in linear second order gradient elasticity using shenfun.
 
     Parameters
     ----------
@@ -181,7 +188,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     compute_error : bool, optional
         If True, two different errors are being computed. The default is False.
     u_ana : tuple, optional
-        Analytical solution as sympy Expr. Needs to be specified only if 
+        Analytical solution as sympy Expr. Needs to be specified only if
         an analytical solution is known. The default is None.
 
     Returns
@@ -189,9 +196,9 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     u_hat : shenfun Function
         Solution of boundary value problem in spectral space.
     '''
-    
+
     # assert input
-    assert isinstance(N, int)
+    assert isinstance(N, (tuple, list))
     assert isinstance(dom, tuple)
     assert isinstance(boundary_conditions, tuple)
     assert isinstance(body_forces, tuple)
@@ -199,14 +206,10 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     assert len(material_parameters) == 7
     if compute_error:
         assert u_ana is None or isinstance(u_ana, tuple)
-    
-    # start time measurement if desired
-    if measure_time:
-        time_start=time.time()
-        
+
     # some parameters
-    dim = len(dom) 
-    
+    dim = len(dom)
+
     # material_parameters
     lambd = material_parameters[0]
     mu = material_parameters[1]
@@ -215,18 +218,19 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
     c3 = material_parameters[4]
     c4 = material_parameters[5]
     c5 = material_parameters[6]
-    
+
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are applied
     # check if only dirichlet-boundary conditions are applied
     vec_space = []
     only_dirichlet_bcs = True
     nonhomogeneous_bcs = False
-    
-    for i in range(dim): # nb of displacement components
+
+    for i in range(dim):  # nb of displacement components
         tens_space = []
-        for j in range(dim): # nb of FunctionSpaces for each component
-            basis = FunctionSpace(N, family='legendre', bc=boundary_conditions[i][j], domain=dom[j])
+        for j in range(dim):  # nb of FunctionSpaces for each component
+            basis = FunctionSpace(N[j], family='legendre',
+                                  bc=boundary_conditions[i][j], domain=dom[j])
             tens_space.append(basis)
             if basis.has_nonhomogeneous_bcs:
                 nonhomogeneous_bcs = True
@@ -234,18 +238,18 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
                 only_dirichlet_bcs = False
         vec_space.append(TensorProductSpace(comm, tuple(tens_space)))
     V = VectorSpace(vec_space)
-    
+
     # body_forces on quadrature points
     V_none = V.get_orthogonal()
     body_forces_quad = Array(V_none, buffer=body_forces)
-    
+
     # test and trial functions
     u = TrialFunction(V)
     v = TestFunction(V)
-    
+
     # matrices
     matrices = []
-    
+
     if c1 != 0.0:
         A = inner(c1*div(grad(u)), div(grad(v)))
     else:
@@ -268,7 +272,6 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
                         D += temp
                     else:
                         D += [temp]
-                        
     E = []
     if c5 != 0.0:
         for i in range(dim):
@@ -288,19 +291,20 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
         G = []
         for i in range(dim):
             for j in range(dim):
-                    temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
-                    if isinstance(temp, list):
-                        G += temp
-                    else:
-                        G += [temp]
+                temp = inner(mu*Dx(u[i], j), Dx(v[j], i))
+                if isinstance(temp, list):
+                    G += temp
+                else:
+                    G += [temp]
         H = inner(lambd*div(u), div(v))
         matrices = A + B + C + D + E + F + G + H
-    
+
     # right hand side of the weak formulation
     b = inner(v, body_forces_quad)
-    
+
     # solution
     u_hat = Function(V)
+
     if nonhomogeneous_bcs:
         # get boundary matrices
         bc_mats = extract_bc_matrices([matrices])
@@ -308,37 +312,37 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
         M = BlockMatrix(matrices)
         # BlockMatrix for inhomogeneous part
         BM = BlockMatrix(bc_mats)
-        
+
         # inhomogeneous part of solution
-        uh_hat = Function(V).set_boundary_dofs()        
-        
+        uh_hat = Function(V).set_boundary_dofs()
+
         # additional part to be passed to the right hand side
         b_add = Function(V)
-        b_add = BM.matvec(-uh_hat, b_add) # negative because added to right hand side
-        
+        # negative because added to right hand side
+        b_add = BM.matvec(-uh_hat, b_add)
+
         # homogeneous part of solution
         u_hat = M.solve(b + b_add)
-        
+
         # solution
         u_hat += uh_hat
     else:
         # BlockMatrix
         M = BlockMatrix(matrices)
-        
+
         # solution
         u_hat = M.solve(b)
-    
-    if measure_time:
-        time_stop = time.time()
-        with open('N_time.dat', 'a') as file:
-            file.write(str(N) + ' ' + str(time_stop - time_start) + '\n')
-    
+
     # compute error using analytical solution if desired
     if compute_error:
-        error = check_solution_gradient(u_hat=u_hat, material_parameters=(lambd, mu, c1, c2, c3, c4, c5),\
-                                        body_forces=body_forces)
+        error = check_solution_gradient(
+                u_hat=u_hat,
+                material_parameters=(lambd, mu, c1, c2, c3, c4, c5),
+                body_forces=body_forces)
+
         with open('N_errorBalanceLinMom.dat', 'a') as file:
-                file.write(str(N) + ' ' + str(error) + '\n')
+            file.write(str(N[0]) + ' ' + str(error) + '\n')
+
         if u_ana is not None:
             # evaluate u_ana at quadrature points
             error_array = Array(V, buffer=u_ana)
@@ -348,8 +352,8 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces, material
             error = sqrt(inner((1, 1), error_array**2))
             # scale by magnitude of solution
             scale = sqrt(inner((1, 1), u_hat.backward()**2))
-            
+
             with open('N_error_u_ana.dat', 'a') as file:
-                file.write(str(N) + ' ' + str(error/scale) + '\n')
-            
+                file.write(str(N[0]) + ' ' + str(error/scale) + '\n')
+
     return u_hat

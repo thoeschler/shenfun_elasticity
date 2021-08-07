@@ -84,7 +84,8 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
         elif isinstance(bc, dict):
             # all bcs can be defined via a dictionary
             return 'ARBITRARY'
-        raise NotImplementedError() 
+        else:
+            raise NotImplementedError() 
 
 
     # dimensionless boundary conditions
@@ -210,11 +211,12 @@ def get_dimensionful_values(u_hat_dimless, boundary_conditions, nondim_disp, non
         Dimensionful displacement field in spectral space.
 
     '''
-    # get size of discretization
-    N = u_hat_dimless.function_space().spaces[0].bases[0].N
     
-    # some parameters
+    # some parameters (dimension)
     dim = len(u_hat_dimless)
+    
+        # get size of discretization
+    N = tuple(u_hat_dimless.function_space().spaces[0].bases[i].N for i in range(dim))
     
     # get dimensionless domain from solution
     dom_dimless = tuple([u_hat_dimless.function_space().spaces[i].bases[i].domain for i in range(dim)])
@@ -227,7 +229,7 @@ def get_dimensionful_values(u_hat_dimless, boundary_conditions, nondim_disp, non
     for i in range(dim): # nb of displacement components
         tens_space = []
         for j in range(dim): # nb of FunctionSpaces for each component
-            basis = FunctionSpace(N, domain=dom[j], family='legendre', bc=boundary_conditions[i][j])
+            basis = FunctionSpace(N[j], domain=dom[j], family='legendre', bc=boundary_conditions[i][j])
             tens_space.append(basis)
         vec_space.append(TensorProductSpace(comm, tuple(tens_space)))
     

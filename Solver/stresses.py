@@ -1,4 +1,5 @@
 from shenfun import Function, project, Dx, VectorSpace
+import numpy as np
 
 def cauchy_stresses(material_parameters, u_hat):
     '''
@@ -155,34 +156,43 @@ def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector):
     T2 = cauchy_stresses
     T3 = hyper_stresses
     n = normal_vector
-    T_none = T2[0][0].function_space()
+    T_none = T2[0][0].function_space().get_orthogonal()
+    tol = 1e-10
+    assert normal_vector[0] ** 2 +  normal_vector[1] ** 2 - 1 < tol
     
     # compute traction vector
     t = [0. for _ in range(dim)]
-    
-    # div(T3)
-    divT3 = [[0. for _ in range(dim)] for _ in range(dim)]
-    for i in range(dim):
-        for j in range(dim):
-            for k in range(dim):
-                divT3[i][j] += project(Dx(T3[i][j][k], k), T_none)
-                
-    # divn(T3), divt(T3)
-    divnT3 = [[0. for _ in range(dim)] for _ in range(dim)]
-    divtT3 = divT3.copy()
-    for i in range(dim):
-        for j in range(dim):
-            for k in range(dim):
-                for l in range(dim):
-                    divnT3[i][j] += ( project(Dx(T3[i][j][k], l), T_none) )*n[k]*n[l]
-                    divtT3[i][j] -= ( project(Dx(T3[i][j][k], l), T_none) )*n[k]*n[l]
+    # check if there are nonzero values in hyper stresses
+    has_nonzero_hyper_stresses = any([val.any() for row in T3 for comp in row for val in np.array(comp)])
+    if has_nonzero_hyper_stresses:
+        # div(T3)
+        divT3 = [[0. for _ in range(dim)] for _ in range(dim)]
+        for i in range(dim):
+            for j in range(dim):
+                for k in range(dim):
+                    # for some reason divT3[i][j] += project(Dx(T3[i][j][k], k), T_none) raises an error --> transform back and forth once
+                    work = project(T3[i][j][k].copy().backward(), T_none)
+                    divT3[i][j] += project(Dx(work, k), T_none)
                     
+        # divn(T3), divt(T3)
+        divnT3 = [[0. for _ in range(dim)] for _ in range(dim)]
+        for i in range(dim):
+            for j in range(dim):
+                for k in range(dim):
+                    for l in range(dim):
+                        work = project(T3[i][j][k].copy().backward(), T_none)
+                        divnT3[i][j] += project(Dx(work, l), T_none) * n[k] * n[l]
+                        
+        divtT3 = np.array(divT3.copy()) - np.array(divnT3.copy())
+                        
     # traction vector
     t = Function(VectorSpace([T_none, T_none]))
     for i in range(dim):
         for j in range(dim):
             for k in range(T_none.bases[0].N):
-                for m in range(T_none.bases[0].N):
-                    t[i][k][m] += (T2[i][j][k][m] - divnT3[i][j][k][m] - 2*divtT3[i][j][k][m])*n[j]
+                for m in range(T_none.bases[1].N):
+                    t[i][k][m] += T2[i][j][k][m] * n[j]
+                    if has_nonzero_hyper_stresses:
+                        t[i][k][m] -= (divnT3[i][j][k][m] + 2 * divtT3[i][j][k][m]) * n[j]
             
     return t

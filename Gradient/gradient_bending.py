@@ -25,7 +25,8 @@ c5 = 0.01
 # body forces
 body_forces = (0., 0.)
 # boundary conditions
-bc = (('lowerdirichlet', None), (['sheartest', (0, -u0, 0)], None))
+#bc = (((0., None), None), (['sheartest', (0, -u0, 0)], None))
+bc = (((0., None), None), ({'left': [('D', 0.), ('N', 0.)], 'right': [('D', - u0)]}, None))
 # size of discretization
 for z in range(30, 32, 2):
     # size of discretization
@@ -56,11 +57,11 @@ for z in range(30, 32, 2):
     
     # save displacement as png
     save_disp_figure(u_hat, multiplier=5.0)
-    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
-    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
+#    t_upper_lower = traction_vector_gradient(T, T3, normal_vector=(0., 1.))
+#    t_left_right = traction_vector_gradient(T, T3, normal_vector=(1., 0.))
     
     # save stresses as png
     save_cauchy_stress(T)
     save_hyper_stress(T3)
-    save_traction_vector_gradient(t_upper_lower, (0., 1.))
-    save_traction_vector_gradient(t_left_right, (1., 0.))
+#    save_traction_vector_gradient(t_upper_lower, (0., 1.))
+#    save_traction_vector_gradient(t_left_right, (1., 0.))
