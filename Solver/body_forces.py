@@ -1,6 +1,7 @@
 from sympy import symbols
 
 def body_forces_cauchy(u, material_parameters):
+
     '''
     Compute body forces via given displacement field 
     for linear Cauchy elasticity.
@@ -14,7 +15,7 @@ def body_forces_cauchy(u, material_parameters):
 
     Returns
     -------
-    body_forces
+    body_forces: tuple(sympy.Expr)
         Volumetric forces as sympy expression.
 
     '''
@@ -22,13 +23,11 @@ def body_forces_cauchy(u, material_parameters):
     assert isinstance(u, tuple)
     assert isinstance(material_parameters, tuple)
     assert len(material_parameters) == 2
-    for val in material_parameters:
-        assert isinstance(val, float)
     
     # some parameters
     dim = len(u)
-    lambd = material_parameters[0]
-    mu = material_parameters[1]
+    lambd, mu = material_parameters
+
     x, y, z = symbols("x,y,z")    
     coord = [x, y, z]
     
@@ -71,7 +70,7 @@ def body_forces_gradient(u, material_parameters):
 
     Returns
     -------
-    body_forces
+    body_forces : tuple(sympy.Expr)
         Volumetric forces as sympy expression.
 
     '''
@@ -82,13 +81,8 @@ def body_forces_gradient(u, material_parameters):
     
     # some parameters
     dim = len(u)
-    lambd = material_parameters[0]
-    mu = material_parameters[1]
-    c1 = material_parameters[2]
-    c2 = material_parameters[3]
-    c3 = material_parameters[4]
-    c4 = material_parameters[5]
-    c5 = material_parameters[6]
+    lambd, mu, c1, c2, c3, c4, c5 = material_parameters
+
     x, y, z = symbols("x,y,z")    
     coord = [x, y, z]
     

@@ -20,8 +20,6 @@ def cauchy_stresses(material_parameters, u_hat):
     '''
     # input assertion
     assert isinstance(material_parameters, tuple)
-    for val in material_parameters:
-        assert isinstance(val, float)
     assert len(material_parameters) == 2
     assert isinstance(u_hat, Function)
     
@@ -29,8 +27,7 @@ def cauchy_stresses(material_parameters, u_hat):
     T_none = u_hat[0].function_space().get_orthogonal()
     dim = len(T_none.bases)
     
-    lambd = material_parameters[0]
-    mu = material_parameters[1]
+    lambd, mu = material_parameters
     
     # displacement gradient
     H = [ [None for _ in range(dim)] for _ in range(dim)]
@@ -79,8 +76,6 @@ def hyper_stresses(material_parameters, u_hat):
     '''
     # input assertion
     assert isinstance(material_parameters, tuple)
-    for val in material_parameters:
-        assert isinstance(val, float)
     assert len(material_parameters) == 5
     assert isinstance(u_hat, Function)
     
@@ -89,11 +84,7 @@ def hyper_stresses(material_parameters, u_hat):
 
     dim = len(T_none.bases)
  
-    c1 = material_parameters[0]
-    c2 = material_parameters[1]
-    c3 = material_parameters[2]
-    c4 = material_parameters[3]
-    c5 = material_parameters[4]
+    c1, c2, c3, c4, c5 = material_parameters
     
     # Laplace
     Laplace = [0. for _ in range(dim)]

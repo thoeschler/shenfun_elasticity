@@ -1,4 +1,5 @@
 import sympy
+import numpy as np
 from shenfun import comm, FunctionSpace, TensorProductSpace, VectorSpace, Function
 
 def get_dimensionless_values(dom, boundary_conditions, body_forces, material_parameters, \
@@ -58,22 +59,17 @@ def get_dimensionless_values(dom, boundary_conditions, body_forces, material_par
         mu = material_parameters[1]/nondim_mat_param
         # wrap material parameters in a tuple
         material_parameters_dimless = (lambd, mu)
-    elif len(material_parameters) == 7:
-        lambd = material_parameters[0]/nondim_mat_param
-        mu = material_parameters[1]/nondim_mat_param
-        c1 = material_parameters[2]/nondim_mat_param/nondim_length**2
-        c2 = material_parameters[3]/nondim_mat_param/nondim_length**2
-        c3 = material_parameters[4]/nondim_mat_param/nondim_length**2
-        c4 = material_parameters[5]/nondim_mat_param/nondim_length**2
-        c5 = material_parameters[6]/nondim_mat_param/nondim_length**2
+    elif len(material_parameters) == 7: # gradient elasticity
+        lambd, mu = np.array(material_parameters)[[0, 1]] / nondim_mat_param
+        c1, c2, c3, c4, c5 = np.array(material_parameters)[2:] / nondim_mat_param / nondim_length**2
         # wrap material parameters in a tuple
-        material_parameters_dimless = (lambd, mu, c1, c2, c3, c4, c5)
+        material_parameters_dimless = lambd, mu, c1, c2, c3, c4, c5
     else:
         raise NotImplementedError()
     
     # assign bc type to each boundary condition
     def assign_bc_type(bc):
-        if bc == None:
+        if bc is None:
             return 'ZERO_TRACTION'
         elif isinstance(bc, str):
             # homogeneous mixed bc, e.g. 'upperdirichlet', 'lowerdirichlet'

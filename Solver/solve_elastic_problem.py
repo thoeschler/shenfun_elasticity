@@ -52,8 +52,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
     dim = len(dom)
 
     #  material_parameters
-    lambd = material_parameters[0]
-    mu = material_parameters[1]
+    lambd, mu = material_parameters
 
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are being applied
@@ -211,13 +210,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
     dim = len(dom)
 
     # material_parameters
-    lambd = material_parameters[0]
-    mu = material_parameters[1]
-    c1 = material_parameters[2]
-    c2 = material_parameters[3]
-    c3 = material_parameters[4]
-    c4 = material_parameters[5]
-    c5 = material_parameters[6]
+    lambd, mu, c1, c2, c3, c4, c5 = material_parameters
 
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are applied
