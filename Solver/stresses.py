@@ -1,6 +1,7 @@
 from shenfun import Function, project, Dx, VectorSpace
 import numpy as np
 
+
 def cauchy_stresses(material_parameters, u_hat):
     '''
     Compute components of Cauchy stress tensor.
@@ -22,38 +23,28 @@ def cauchy_stresses(material_parameters, u_hat):
     assert isinstance(material_parameters, tuple)
     assert len(material_parameters) == 2
     assert isinstance(u_hat, Function)
-    
+
     # some parameters
     T_none = u_hat[0].function_space().get_orthogonal()
     dim = len(T_none.bases)
-    
+
     lambd, mu = material_parameters
-    
+
     # displacement gradient
-    H = [ [None for _ in range(dim)] for _ in range(dim)]
+    H = np.empty(shape=(dim, dim))
     for i in range(dim):
         for j in range(dim):
-            H[i][j] = project(Dx(u_hat[i], j), T_none)
-    
+            H[i, j] = project(Dx(u_hat[i], j), T_none)
+
     # linear strain tensor
-    E = [ [None for _ in range(dim)] for _ in range(dim)]
-    for i in range(dim):
-        for j in range(dim):
-            E[i][j] = 0.5 * (H[i][j] + H[j][i])
-    
+    E = 0.5 * (H + H.T)
+
     # trace of linear strain tensor
-    trE = 0.
-    for i in range(dim):
-        trE += E[i][i]
-    
+    trE = np.trace(E)
+
     # Cauchy stress tensor
-    T = [ [None for _ in range(dim)] for _ in range(dim)]
-    for i in range(dim):
-        for j in range(dim):
-            T[i][j] = 2.0 * mu * E[i][j] 
-            if i==j:
-                T[i][j] += lambd * trE
-            
+    T = 2.0 * mu * E + lambd * trE * np.identity(dim)
+
     return T
 
 
@@ -78,26 +69,26 @@ def hyper_stresses(material_parameters, u_hat):
     assert isinstance(material_parameters, tuple)
     assert len(material_parameters) == 5
     assert isinstance(u_hat, Function)
-    
+
     # some parameters
     T_none = u_hat[0].function_space()
-
     dim = len(T_none.bases)
- 
     c1, c2, c3, c4, c5 = material_parameters
-    
+
+    # Divergence
+    Div = np.sum([project(Dx(u_hat[i], i), T_none)] for i in range(dim))
+
     # Laplace
-    Laplace = [0. for _ in range(dim)]
+    Laplace = np.empty(dim)
     for i in range(dim):
         for j in range(dim):
             Laplace[i] += project(Dx(u_hat[i], j, 2), T_none)
-            
+
     # grad(div(u))
-    GradDiv = [0. for _ in range(dim)]
+    GradDiv = np.empty(dim)
     for i in range(dim):
-        for j in range(dim):
-            GradDiv[i] += project(Dx(Dx(u_hat[j], j), i), T_none)
-    
+        GradDiv[i] += project(Dx(Div, i), T_none)
+
     # hyper stresses
     T = [ [ [0. for _ in range(dim)] for _ in range(dim)] for _ in range(dim)]
     for i in range(dim):
