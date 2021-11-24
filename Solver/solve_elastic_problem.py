@@ -39,10 +39,6 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
 
     '''
     # assert input
-    assert isinstance(N, (tuple, list))
-    assert isinstance(dom, tuple)
-    assert isinstance(boundary_conditions, tuple)
-    assert isinstance(body_forces, tuple)
     assert isinstance(material_parameters, tuple)
     assert len(material_parameters) == 2
     if compute_error:
