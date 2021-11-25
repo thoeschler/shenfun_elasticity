@@ -1,5 +1,7 @@
 from shenfun import Function, project, Dx, VectorSpace
 import numpy as np
+import itertools as it
+
 
 def cauchy_stresses(material_parameters, u_hat):
     '''
@@ -14,50 +16,52 @@ def cauchy_stresses(material_parameters, u_hat):
 
     Returns
     -------
-    T : list
-        Cauchy stress Tensor in spectral space.
+    T, space : tuple[numpy.ndarray,
+                         shenfun.tensorproductspace.TensorProductSpace]
+        T: stress values in physical space
+        space: space corresponding to the components of T
 
     '''
     # input assertion
     assert isinstance(material_parameters, tuple)
-    for val in material_parameters:
-        assert isinstance(val, float)
     assert len(material_parameters) == 2
     assert isinstance(u_hat, Function)
-    
+
     # some parameters
-    T_none = u_hat[0].function_space().get_orthogonal()
-    dim = len(T_none.bases)
-    
-    lambd = material_parameters[0]
-    mu = material_parameters[1]
-    
+    space = u_hat[0].function_space().get_orthogonal()
+    dim = len(space.bases)
+
+    # size of discretization
+    N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
+
+    lmbda, mu = material_parameters
+
     # displacement gradient
-    H = [ [None for _ in range(dim)] for _ in range(dim)]
+    H = np.empty(shape=(dim, dim, *N))
     for i in range(dim):
         for j in range(dim):
-            H[i][j] = project(Dx(u_hat[i], j), T_none)
-    
-    # linear strain tensor
-    E = [ [None for _ in range(dim)] for _ in range(dim)]
-    for i in range(dim):
-        for j in range(dim):
-            E[i][j] = 0.5 * (H[i][j] + H[j][i])
-    
+            H[i, j] = project(Dx(u_hat[i], j), space).backward()
+
+    # linear strain tensor, transpose first to indices of array
+    E = 0.5 * (H + np.transpose(
+            H, axes=np.hstack(
+                    ((1, 0), range(2, 2 + dim)))
+            )
+            )
+
     # trace of linear strain tensor
-    trE = 0.
+    trE = np.trace(E)
+
+    # create block with identity matrices on diagonal
+    identity = np.zeros_like(H)
     for i in range(dim):
-        trE += E[i][i]
-    
+        identity[i, i] = np.ones(N)
+
     # Cauchy stress tensor
-    T = [ [None for _ in range(dim)] for _ in range(dim)]
-    for i in range(dim):
-        for j in range(dim):
-            T[i][j] = 2.0 * mu * E[i][j] 
-            if i==j:
-                T[i][j] += lambd * trE
-            
-    return T
+    T = 2.0 * mu * E + lmbda * trE * identity
+
+    # return stresses and the space as sigma is now just a numpy.ndarray
+    return T, space
 
 
 def hyper_stresses(material_parameters, u_hat):
@@ -79,58 +83,67 @@ def hyper_stresses(material_parameters, u_hat):
     '''
     # input assertion
     assert isinstance(material_parameters, tuple)
-    for val in material_parameters:
-        assert isinstance(val, float)
     assert len(material_parameters) == 5
     assert isinstance(u_hat, Function)
-    
-    # some parameters
-    T_none = u_hat[0].function_space()
 
-    dim = len(T_none.bases)
- 
-    c1 = material_parameters[0]
-    c2 = material_parameters[1]
-    c3 = material_parameters[2]
-    c4 = material_parameters[3]
-    c5 = material_parameters[4]
-    
+    # some parameters
+    space = u_hat[0].function_space()
+    dim = len(space.bases)
+    c1, c2, c3, c4, c5 = material_parameters
+
+    # size of discretization
+    N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
+
     # Laplace
-    Laplace = [0. for _ in range(dim)]
+    Laplace = np.zeros(shape=(dim, *N))
     for i in range(dim):
         for j in range(dim):
-            Laplace[i] += project(Dx(u_hat[i], j, 2), T_none)
-            
+            Laplace[i] += project(Dx(u_hat[i], j, 2), space).backward()
+
     # grad(div(u))
-    GradDiv = [0. for _ in range(dim)]
+    GradDiv = np.zeros(shape=(dim, *N))
     for i in range(dim):
         for j in range(dim):
-            GradDiv[i] += project(Dx(Dx(u_hat[j], j), i), T_none)
-    
-    # hyper stresses
-    T = [ [ [0. for _ in range(dim)] for _ in range(dim)] for _ in range(dim)]
+            GradDiv[i] += project(Dx(Dx(u_hat[j], j), i), space).backward()
+
+    # grad(grad(u))
+    GradGrad = np.empty(shape=(dim, dim, dim, *N))
     for i in range(dim):
         for j in range(dim):
             for k in range(dim):
-                if i==j:
-                    if c2 != 0.:
-                        T[i][j][k] += 0.5*c2*Laplace[k]
-                    if c3 != 0.:
-                        T[i][j][k] += 0.5*c3*GradDiv[k]
-                if i==k:
-                    if c2 != 0.:
-                        T[i][j][k] += 0.5*c2*Laplace[j]
-                    if c3 != 0.:
-                        T[i][j][k] += 0.5*c3*GradDiv[j]
-                if j==k:
-                    if c1 != 0.:
-                        T[i][j][k] += c1*Laplace[i]
-                if c4 != 0.:
-                    T[i][j][k] += project(c4*Dx(Dx(u_hat[i], j), k), T_none)
-                if c5 != 0.:
-                    T[i][j][k] += project(0.5*c5*Dx(Dx(u_hat[j], i), k), T_none) + project(0.5*c5*Dx(Dx(u_hat[k], i), j), T_none)
+                GradGrad[i, j, k] = project(
+                        Dx(Dx(u_hat[i], j), k), space
+                        ).backward()
+
+    # create block with identity matrices on diagonal
+    identity = np.identity(dim)
+
+    # define axes for transposition
+    # use np.transpose(..., axes=axes[0, 2, 1]) to transpose axes 1 and 2
+    ax = [np.hstack((val, range(3, 3 + dim))) for val
+          in it.product(range(3), repeat=3)]
+    axes = np.reshape(ax, (3, 3, 3, 3 + dim))
+
+    # hyper stresses
+    T = c1 * np.transpose(
+            np.tensordot(identity, Laplace, axes=0), axes=axes[2, 1, 0]
+            ) \
+        + c2 * (np.tensordot(identity, Laplace, axes=0) +
+                np.transpose(np.tensordot(identity, Laplace, axes=0),
+                             axes=axes[0, 2, 1])
+                ) \
+        + c3 * (np.tensordot(identity, GradDiv, axes=0) +
+                np.transpose(np.tensordot(identity, GradDiv, axes=0),
+                             axes=axes[0, 2, 1])
+                ) \
+        + c4 * GradGrad \
+        + c5 / 2 * (
+                np.transpose(GradGrad, axes=axes[1, 0, 2]) +
+                np.transpose(GradGrad, axes=axes[2, 1, 0])
+                )
 
     return T
+
 
 def traction_vector_gradient(cauchy_stresses, hyper_stresses, normal_vector):
     '''
