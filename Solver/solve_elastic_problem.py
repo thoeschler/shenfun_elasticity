@@ -48,7 +48,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
     dim = len(dom)
 
     #  material_parameters
-    lambd, mu = material_parameters
+    lmbda, mu = material_parameters
 
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are being applied
@@ -60,8 +60,10 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
     for i in range(dim):  # nb of displacement components
         tens_space = []
         for j in range(dim):  # nb of FunctionSpaces for each component
+            print(boundary_conditions, dom, N)
             basis = FunctionSpace(N[j], family='legendre',
-                                  bc=boundary_conditions[i][j], domain=dom[j])
+                                  bc=boundary_conditions[i][j],
+                                  domain=tuple(dom[j]))
             tens_space.append(basis)
             if basis.has_nonhomogeneous_bcs:
                 nonhomogeneous_bcs = True
@@ -90,7 +92,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
                     B += temp
                 else:
                     B += [temp]
-        C = inner(lambd*div(u), div(v))
+        C = inner(lmbda*div(u), div(v))
         matrices = A + B + C
 
     else:
@@ -102,7 +104,7 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
                     B += temp
                 else:
                     B += [temp]
-        C = inner(lambd*div(u), div(v))
+        C = inner(lmbda*div(u), div(v))
         matrices = A + B + C
 
     # right hand side of the weak formulation
@@ -141,10 +143,10 @@ def solve_cauchy_elasticity(N, dom, boundary_conditions, body_forces,
     # compute error using analytical solution if desired
     if compute_error:
         error = check_solution_cauchy(u_hat=u_hat,
-                                      material_parameters=(lambd, mu),
+                                      material_parameters=(lmbda, mu),
                                       body_forces=body_forces)
         with open('N_errorLameNavier.dat', 'a') as file:
-            file.write(str(N) + ' ' + str(error) + '\n')
+            file.write(f'{N} {error} \n')
 
         if u_ana is not None:
             # evaluate u_ana at quadrature points
@@ -194,7 +196,6 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
 
     # assert input
     assert isinstance(N, (tuple, list))
-    assert isinstance(dom, tuple)
     assert isinstance(boundary_conditions, tuple)
     assert isinstance(body_forces, tuple)
     assert isinstance(material_parameters, tuple)
@@ -206,7 +207,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
     dim = len(dom)
 
     # material_parameters
-    lambd, mu, c1, c2, c3, c4, c5 = material_parameters
+    lmbda, mu, c1, c2, c3, c4, c5 = material_parameters
 
     # create VectorSpace for displacement
     # check if nonhomogeneous boundary conditions are applied
@@ -219,7 +220,8 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
         tens_space = []
         for j in range(dim):  # nb of FunctionSpaces for each component
             basis = FunctionSpace(N[j], family='legendre',
-                                  bc=boundary_conditions[i][j], domain=dom[j])
+                                  bc=boundary_conditions[i][j],
+                                  domain=tuple(dom[j]))
             tens_space.append(basis)
             if basis.has_nonhomogeneous_bcs:
                 nonhomogeneous_bcs = True
@@ -274,7 +276,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
     F = inner(mu*grad(u), grad(v))
 
     if only_dirichlet_bcs:
-        G = inner((lambd + mu)*div(u), div(v))
+        G = inner((lmbda + mu)*div(u), div(v))
         matrices = A + B + C + D + E + F + G
     else:
         G = []
@@ -285,7 +287,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
                     G += temp
                 else:
                     G += [temp]
-        H = inner(lambd*div(u), div(v))
+        H = inner(lmbda*div(u), div(v))
         matrices = A + B + C + D + E + F + G + H
 
     # right hand side of the weak formulation
@@ -326,7 +328,7 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
     if compute_error:
         error = check_solution_gradient(
                 u_hat=u_hat,
-                material_parameters=(lambd, mu, c1, c2, c3, c4, c5),
+                material_parameters=(lmbda, mu, c1, c2, c3, c4, c5),
                 body_forces=body_forces)
 
         with open('N_errorBalanceLinMom.dat', 'a') as file:
@@ -343,6 +345,6 @@ def solve_gradient_elasticity(N, dom, boundary_conditions, body_forces,
             scale = sqrt(inner((1, 1), u_hat.backward()**2))
 
             with open('N_error_u_ana.dat', 'a') as file:
-                file.write(str(N[0]) + ' ' + str(error/scale) + '\n')
+                file.write((f'{N} {error/scale} \n'))
 
     return u_hat
