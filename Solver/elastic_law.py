@@ -108,14 +108,14 @@ class LinearCauchyElasticity:
         T = c1 * np.transpose(
                 np.tensordot(identity, Laplace, axes=0), axes=axes[2, 1, 0]
                 ) \
-            + c2 * (np.tensordot(identity, Laplace, axes=0) +
-                    np.transpose(np.tensordot(identity, Laplace, axes=0),
-                                 axes=axes[0, 2, 1])
-                    ) \
-            + c3 * (np.tensordot(identity, GradDiv, axes=0) +
-                    np.transpose(np.tensordot(identity, GradDiv, axes=0),
-                                 axes=axes[0, 2, 1])
-                    ) \
+            + c2 / 2 * (np.tensordot(identity, Laplace, axes=0) +
+                        np.transpose(np.tensordot(identity, Laplace, axes=0),
+                                     axes=axes[0, 2, 1])
+                        ) \
+            + c3 / 2 * (np.tensordot(identity, GradDiv, axes=0) +
+                        np.transpose(np.tensordot(identity, GradDiv, axes=0),
+                                     axes=axes[0, 2, 1])
+                        ) \
             + c4 * GradGrad \
             + c5 / 2 * (
                     np.transpose(GradGrad, axes=axes[1, 0, 2]) +

@@ -17,11 +17,12 @@ class ElasticProblem:
     def setup_problem(self):
         assert hasattr(self, "set_boundary_conditions")
         assert hasattr(self, "set_material_parameters")
+
+        self.material_parameters = self.set_material_parameters()
         if hasattr(self, "set_analytical_solution"):
             self.set_analytical_solution()
 
         self.bc = self.set_boundary_conditions()
-        self.material_parameters = self.set_material_parameters()
         self.elastic_law.set_material_parameters(self.material_parameters)
 
         if hasattr(self, "set_body_forces"):

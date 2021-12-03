@@ -11,8 +11,7 @@ class ElasticSolver:
         self.bc = bc
         self.material_parameters = material_parameters
         self.elastic_law = elastic_law
-        if body_forces is not None:
-            self.body_forces = body_forces
+        self.body_forces = body_forces
 
     def setup_function_space(self):
         self.nonhomogeneous_bcs = False

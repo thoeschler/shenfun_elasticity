@@ -176,15 +176,18 @@ def get_dimensionless_boundary_conditions(boundary_conditions, l_ref,
 
 def get_dimensionless_body_forces(body_forces, l_ref, u_ref,
                                   mat_param_ref):
-    dim = len(body_forces)
-    b = list(body_forces)
-    for i in range(dim):
-        if isinstance(b[i], sp.Expr):  # coordinate transformation
-            for coord in b[i].free_symbols:
-                b[i] = b[i].replace(coord, coord * l_ref)
-        b[i] *= l_ref ** 2 / u_ref / mat_param_ref
+    if body_forces is None:
+        return None
+    else:
+        dim = len(body_forces)
+        b = list(body_forces)
+        for i in range(dim):
+            if isinstance(b[i], sp.Expr):  # coordinate transformation
+                for coord in b[i].free_symbols:
+                    b[i] = b[i].replace(coord, coord * l_ref)
+            b[i] *= l_ref ** 2 / u_ref / mat_param_ref
 
-    return tuple(b)
+        return tuple(b)
 
 
 def get_dimensionless_displacement(displacement, l_ref, u_ref):
