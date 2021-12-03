@@ -9,14 +9,13 @@ from sympy import cos, sin, pi
 
 class DirichletProblem(ElasticProblem):
     def __init__(self, N, domain, elastic_law):
-        self.elastic_law = elastic_law
         self.ell, self.h = domain[0][1], domain[1][1]
         self.u0 = self.ell / 100
-        self.set_analytical_solution(self.u0, self.ell, self.h)
         super().__init__(N, domain, elastic_law)
 
-    def set_analytical_solution(self, u0, l, h):
+    def set_analytical_solution(self):
         x, y = sp.symbols("x, y")
+        u0, l, h = self.u0, self.ell, self.h
         if self.elastic_law.name == "LinearCauchyElasticity":
             self.u_ana = (
                     u0 * ((1 + x / l) * (y / h) ** 2 * (1 - y / h) ** 2
@@ -69,9 +68,64 @@ class DirichletProblem(ElasticProblem):
         return self.ell, self.u0, self.material_parameters[0]
 
 
+class TensileTestOneDimensional(ElasticProblem):
+    def __init__(self, N, domain, elastic_law):
+        self.ell, self.h = domain[0][1], domain[1][1]
+        self.u0 = self.ell / 100
+        super().__init__(N, domain, elastic_law)
+        self.set_analytical_solution(self.u0, self.ell, self.h)
+
+    def set_analytical_solution(self, u0, l, h):
+        assert hasattr(self, "material_parameters")
+        lmbda, mu = self.material_parameters[[0, 1]]
+        nu = lmbda / (2 * (lmbda + mu))
+        x, y = sp.symbols("x, y")
+        self.u_ana = (x / l * u0, nu / (1 - nu) * u0 / l * (h - y))
+
+    def set_boundary_conditions(self):
+        x, y = sp.symbols("x, y", real=True)
+        bc = (((0., self.u0), None), (None, (None, 0.)))
+        return bc
+
+    def set_material_parameters(self):
+        if self.elastic_law.name == "LinearCauchyElasticity":
+            E = 400.
+            nu = 0.4
+            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
+            mu = E / (2 * (1 + nu))
+            return lmbda, mu
+
+        elif self.elastic_law.name == "LinearGradientElasticity":
+            E = 400.
+            nu = 0.4
+            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
+            mu = E / (2 * (1 + nu))
+            c1 = c2 = c3 = c4 = c5 = 0.1
+            return lmbda, mu, c1, c2, c3, c4, c5
+
+    def set_nondim_parameters(self):
+        return self.ell, self.u0, self.material_parameters[0]
+
+
 def test_dirichlet():
-    N = (60, 60)
+    N = (30, 30)
     domain = ((0., 10.), (0., 5))
+    print("Starting Dirichlet test ...")
+    for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
+        DirichletTest = DirichletProblem(N, domain, elastic_law)
+        u_hat_dl = DirichletTest.solve()
+        u_ana_dl = get_dimensionless_displacement(DirichletTest.u_ana,
+                                                  DirichletTest.l_ref,
+                                                  DirichletTest.u_ref)
+
+        error = compute_numerical_error(u_ana_dl, u_hat_dl)
+        print(f'Error {elastic_law.name}:\t {error}')
+
+
+def test_tensile_test_one_dimensional():
+    N = (30, 30)
+    domain = ((0., 10.), (0., 5))
+    print("Starting tensile test ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
         DirichletTest = DirichletProblem(N, domain, elastic_law)
         u_hat_dl = DirichletTest.solve()
@@ -84,3 +138,4 @@ def test_dirichlet():
 
 
 test_dirichlet()
+test_tensile_test_one_dimensional()
