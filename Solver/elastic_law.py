@@ -10,6 +10,24 @@ class LinearCauchyElasticity:
         self.name = "LinearCauchyElasticity"
         self.nb_material_parameters = 2
 
+    def check_with_pde(self, u_hat, material_parameters, body_forces):
+        assert isinstance(u_hat, sf.Function)
+        assert len(material_parameters) == self.nb_material_parameters
+
+        lambd, mu = material_parameters
+        V = u_hat.function_space().get_orthogonal()
+        # left hand side of pde
+        lhs = (lambd + mu) * grad(div(u_hat)) + mu * div(grad(u_hat))
+
+        error_array = sf.Array(V, buffer=body_forces)
+        error_array += sf.project(lhs, V).backward()
+
+        error = np.sqrt(inner((1, 1), error_array ** 2))
+        # scale by magnitude of solution
+        scale = np.sqrt(inner((1, 1), u_hat.backward() ** 2))
+
+        return error / scale
+
     def compute_body_forces(self, u):
         assert hasattr(self, "material_parameters")
         assert len(self.material_parameters) == self.nb_material_parameters
@@ -154,6 +172,26 @@ class LinearGradientElasticity:
     def __init__(self):
         self.name = "LinearGradientElasticity"
         self.nb_material_parameters = 7
+
+    def check_with_pde(self, u_hat, material_parameters, body_forces):
+        assert isinstance(u_hat, sf.Function)
+        assert len(material_parameters) == self.nb_material_parameters
+
+        lambd, mu, c1, c2, c3, c4, c5 = material_parameters
+        V = u_hat.function_space().get_orthogonal()
+        # left hand side of pde
+        lhs = (lambd + mu) * grad(div(u_hat)) + mu * div(grad(u_hat)) \
+            - (c1 + c4) * div(grad(div(grad(u_hat)))) \
+            - (c2 + c3 + c5) * grad(div(div(grad(u_hat))))
+
+        error_array = sf.Array(V, buffer=body_forces)
+        error_array += sf.project(lhs, V).backward()
+
+        error = np.sqrt(inner((1, 1), error_array ** 2))
+        # scale by magnitude of solution
+        scale = np.sqrt(inner((1, 1), u_hat.backward() ** 2))
+
+        return error / scale
 
     def compute_cauchy_stresses(self, u_hat):
         assert isinstance(u_hat, sf.Function)
