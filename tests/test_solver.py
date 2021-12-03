@@ -107,6 +107,48 @@ class TensileTestOneDimensional(ElasticProblem):
         return self.ell, self.u0, self.material_parameters[0]
 
 
+class TensileTestClamped(ElasticProblem):
+    def __init__(self, N, domain, elastic_law):
+        self.ell, self.h = domain[0][1], domain[1][1]
+        self.u0 = self.ell / 100
+        super().__init__(N, domain, elastic_law)
+
+    def set_boundary_conditions(self):
+        x, y = sp.symbols("x, y", real=True)
+        if self.elastic_law.name == "LinearCauchyElasticity":
+            bc = (
+                    ((0, self.u0), None),
+                    ((0, 0), None)
+                    )
+        elif self.elastic_law.name == "LinearGradientElasticity":
+            bc = ((
+                    {'left': [('D', 0.), ('N', 0.)],
+                        'right': [('D', self.u0)]},
+                    None),
+                  ((0., 0.), None)
+                  )
+        return bc
+
+    def set_material_parameters(self):
+        if self.elastic_law.name == "LinearCauchyElasticity":
+            E = 400.
+            nu = 0.4
+            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
+            mu = E / (2 * (1 + nu))
+            return lmbda, mu
+
+        elif self.elastic_law.name == "LinearGradientElasticity":
+            E = 400.
+            nu = 0.4
+            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
+            mu = E / (2 * (1 + nu))
+            c1 = c2 = c3 = c4 = c5 = 0.1
+            return lmbda, mu, c1, c2, c3, c4, c5
+
+    def set_nondim_parameters(self):
+        return self.ell, self.u0, self.material_parameters[0]
+
+
 def test_dirichlet():
     N = (30, 30)
     domain = ((0., 10.), (0., 5))
@@ -125,7 +167,7 @@ def test_dirichlet():
 def test_tensile_test_one_dimensional():
     N = (30, 30)
     domain = ((0., 10.), (0., 5))
-    print("Starting tensile test ...")
+    print("Starting tensile test (one dimensional) ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
         DirichletTest = DirichletProblem(N, domain, elastic_law)
         u_hat_dl = DirichletTest.solve()
@@ -137,5 +179,17 @@ def test_tensile_test_one_dimensional():
         print(f'Error {elastic_law.name}:\t {error}')
 
 
+def test_tensile_test_clamped():
+    N = (30, 30)
+    domain = ((0., 10.), (0., 5))
+    print("Starting tensile test (clamped) ...")
+    for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
+        DirichletTest = DirichletProblem(N, domain, elastic_law)
+        u_hat_dl = DirichletTest.solve()
+
+    print("Done")
+
+
 test_dirichlet()
 test_tensile_test_one_dimensional()
+test_tensile_test_clamped()
