@@ -66,14 +66,10 @@ class LinearCauchyElasticity:
         H = np.empty(shape=(dim, dim, *N))
         for i in range(dim):
             for j in range(dim):
-                H[i, j] = sf.project(Dx(u_hat[i], j), space)
+                H[i, j] = sf.project(Dx(u_hat[i], j), space).backward()
 
-        # linear strain tensor, transpose first to indices of array
-        E = 0.5 * (H + np.transpose(
-                H, axes=np.hstack(
-                        ((1, 0), range(2, 2 + dim)))
-                )
-                )
+        # linear strain tensor
+        E = 0.5 * (H + np.swapaxes(H, 0, 1))
 
         # trace of linear strain tensor
         trE = np.trace(E)
@@ -86,59 +82,6 @@ class LinearCauchyElasticity:
         # Cauchy stress tensor
         T = 2.0 * mu * E + lmbda * trE * identity
 
-        return T, space
-
-    def compute_hyper_stresses(self, u_hat):
-        assert isinstance(u_hat, sf.Function)
-
-        space = u_hat[0].function_space()
-        dim = len(space.bases)
-        c1, c2, c3, c4, c5 = self.material_parameters[2:]
-        N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
-
-        Laplace = np.zeros(shape=(dim, *N))
-        for i in range(dim):
-            for j in range(dim):
-                Laplace[i] += sf.project(Dx(u_hat[i], j, 2), space).backward()
-
-        GradDiv = np.zeros(shape=(dim, *N))
-        for i in range(dim):
-            for j in range(dim):
-                GradDiv[i] += sf.project(Dx(Dx(u_hat[j], j), i), space).backward()
-
-        GradGrad = np.empty(shape=(dim, dim, dim, *N))
-        for i in range(dim):
-            for j in range(dim):
-                for k in range(dim):
-                    GradGrad[i, j, k] = sf.project(
-                            Dx(Dx(u_hat[i], j), k), space
-                            ).backward()
-
-        identity = np.identity(dim)
-
-        # define axes for transposition
-        # use np.transpose(..., axes=axes[0, 2, 1]) to transpose axes 1 and 2
-        ax = [np.hstack((val, range(3, 3 + dim))) for val
-              in it.product(range(3), repeat=3)]
-        axes = np.reshape(ax, (3, 3, 3, 3 + dim))
-
-        # hyper stresses
-        T = c1 * np.transpose(
-                np.tensordot(identity, Laplace, axes=0), axes=axes[2, 1, 0]
-                ) \
-            + c2 / 2 * (np.tensordot(identity, Laplace, axes=0) +
-                        np.transpose(np.tensordot(identity, Laplace, axes=0),
-                                     axes=axes[0, 2, 1])
-                        ) \
-            + c3 / 2 * (np.tensordot(identity, GradDiv, axes=0) +
-                        np.transpose(np.tensordot(identity, GradDiv, axes=0),
-                                     axes=axes[0, 2, 1])
-                        ) \
-            + c4 * GradGrad \
-            + c5 / 2 * (
-                    np.transpose(GradGrad, axes=axes[1, 0, 2]) +
-                    np.transpose(GradGrad, axes=axes[2, 1, 0])
-                    )
         return T, space
 
     def dw_int(self, u, v):
@@ -199,20 +142,16 @@ class LinearGradientElasticity:
         space = u_hat[0].function_space().get_orthogonal()
         dim = len(space.bases)
         N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
-        lmbda, mu = self.material_parameters[[0, 1]]
+        lmbda, mu = self.material_parameters[slice(2)]
 
         # displacement gradient
         H = np.empty(shape=(dim, dim, *N))
         for i in range(dim):
             for j in range(dim):
-                H[i, j] = sf.project(Dx(u_hat[i], j), space)
+                H[i, j] = sf.project(Dx(u_hat[i], j), space).backward()
 
-        # linear strain tensor, transpose first to indices of array
-        E = 0.5 * (H + np.transpose(
-                H, axes=np.hstack(
-                        ((1, 0), range(2, 2 + dim)))
-                )
-                )
+        # linear strain tensor
+        E = 0.5 * (H + np.swapaxes(H, 0, 1))
 
         # trace of linear strain tensor
         trE = np.trace(E)
@@ -225,7 +164,55 @@ class LinearGradientElasticity:
         # Cauchy stress tensor
         T = 2.0 * mu * E + lmbda * trE * identity
 
-        return T
+        return T, space
+    
+    def compute_hyper_stresses(self, u_hat):
+        assert isinstance(u_hat, sf.Function)
+
+        space = u_hat[0].function_space()
+        dim = len(space.bases)
+        c1, c2, c3, c4, c5 = self.material_parameters[2:]
+        N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
+
+        Laplace = np.zeros(shape=(dim, *N))
+        for i in range(dim):
+            for j in range(dim):
+                Laplace[i] += sf.project(Dx(u_hat[i], j, 2), space).backward()
+
+        GradDiv = np.zeros(shape=(dim, *N))
+        for i in range(dim):
+            for j in range(dim):
+                GradDiv[i] += sf.project(
+                        Dx(Dx(u_hat[j], j), i), space
+                                        ).backward()
+
+        GradGrad = np.empty(shape=(dim, dim, dim, *N))
+        for i in range(dim):
+            for j in range(dim):
+                for k in range(dim):
+                    GradGrad[i, j, k] = sf.project(
+                            Dx(Dx(u_hat[i], j), k), space
+                            ).backward()
+
+        identity = np.identity(dim)
+
+        # hyper stresses
+        T = c1 * np.swapaxes(
+                np.tensordot(identity, Laplace, axes=0), 0, 2
+                ) \
+            + c2 / 2 * (np.tensordot(identity, Laplace, axes=0) +
+                        np.swapaxes(np.tensordot(identity, Laplace, axes=0),
+                                     1, 2)
+                        ) \
+            + c3 / 2 * (np.tensordot(identity, GradDiv, axes=0) +
+                        np.swapaxes(np.tensordot(identity, GradDiv, axes=0),
+                                    1, 2)
+                        ) \
+            + c4 * GradGrad \
+            + c5 / 2 * (np.swapaxes(GradGrad, 0, 1) + 
+                        np.swapaxes(GradGrad, 0, 2))
+
+        return T, space
 
     def dw_int(self, u, v):
         assert isinstance(u, sf.TrialFunction)
