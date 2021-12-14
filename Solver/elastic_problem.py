@@ -1,10 +1,12 @@
 from shenfun_elasticity.Solver.solver import ElasticSolver
 from shenfun_elasticity.Solver.utilities import get_dimensionless_parameters
+from mpi4py_fft import generate_xdmf
 
 
 class ElasticProblem:
     def __init__(self, N, domain, elastic_law):
         self.N = N
+        self.dim = len(N)
         self.domain = domain
         self.elastic_law = elastic_law
         self.setup_problem()
@@ -13,7 +15,7 @@ class ElasticProblem:
         return ElasticSolver(self.N, self.domain_dl, self.bc_dl,
                              self.material_parameters_dl, self.body_forces_dl,
                              self.elastic_law)
-
+    
     def setup_problem(self):
         assert hasattr(self, "set_boundary_conditions")
         assert hasattr(self, "set_material_parameters")
@@ -52,3 +54,10 @@ class ElasticProblem:
         self.solution = solver.solve()
 
         return self.solution
+    
+    def write_xdmf_file(self, files):
+        if not isinstance(files, (list, tuple)):
+            generate_xdmf(files)
+        else:
+            for f in files:
+                generate_xdmf(f)
