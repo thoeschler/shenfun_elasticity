@@ -451,7 +451,7 @@ def test_tensile_test_clamped():
     print("Starting tensile test (clamped) ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
         TensileTest = TensileTestClamped(N, domain, elastic_law)
-        u_hat_dl = TensileTest.solve()
+        _ = TensileTest.solve()
         TensileTest.postprocess()
     print("Finished tensile test (clamped)!")
 

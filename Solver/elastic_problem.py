@@ -15,7 +15,7 @@ class ElasticProblem:
         return ElasticSolver(self.N, self.domain_dl, self.bc_dl,
                              self.material_parameters_dl, self.body_forces_dl,
                              self.elastic_law)
-    
+
     def setup_problem(self):
         assert hasattr(self, "set_boundary_conditions")
         assert hasattr(self, "set_material_parameters")
@@ -54,7 +54,7 @@ class ElasticProblem:
         self.solution = solver.solve()
 
         return self.solution
-    
+
     def write_xdmf_file(self, files):
         if not isinstance(files, (list, tuple)):
             generate_xdmf(files)

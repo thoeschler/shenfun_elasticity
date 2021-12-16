@@ -1,7 +1,6 @@
 import shenfun as sf
 import sympy as sp
 import numpy as np
-import itertools as it
 from shenfun import inner, div, grad, Dx
 
 
@@ -165,7 +164,7 @@ class LinearGradientElasticity:
         T = 2.0 * mu * E + lmbda * trE * identity
 
         return T, space
-    
+
     def compute_hyper_stresses(self, u_hat):
         assert isinstance(u_hat, sf.Function)
 
@@ -197,20 +196,15 @@ class LinearGradientElasticity:
         identity = np.identity(dim)
 
         # hyper stresses
-        T = c1 * np.swapaxes(
-                np.tensordot(identity, Laplace, axes=0), 0, 2
-                ) \
+        T = c1 * np.swapaxes(np.tensordot(identity, Laplace, axes=0), 0, 2) \
             + c2 / 2 * (np.tensordot(identity, Laplace, axes=0) +
-                        np.swapaxes(np.tensordot(identity, Laplace, axes=0),
-                                     1, 2)
+                        np.swapaxes(np.tensordot(identity, Laplace, axes=0), 1, 2)
                         ) \
             + c3 / 2 * (np.tensordot(identity, GradDiv, axes=0) +
-                        np.swapaxes(np.tensordot(identity, GradDiv, axes=0),
-                                    1, 2)
+                        np.swapaxes(np.tensordot(identity, GradDiv, axes=0), 1, 2)
                         ) \
             + c4 * GradGrad \
-            + c5 / 2 * (np.swapaxes(GradGrad, 0, 1) + 
-                        np.swapaxes(GradGrad, 0, 2))
+            + c5 / 2 * (np.swapaxes(GradGrad, 0, 1) + np.swapaxes(GradGrad, 0, 2))
 
         return T, space
 
