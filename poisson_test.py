@@ -16,31 +16,21 @@ FX = FunctionSpace(20, family='legendre',
 FY = FunctionSpace(20, family='legendre', bc=(0, 0))
 T = TensorProductSpace(comm, (FX, FY))
 
-# project_f = inner(Array(FX, buffer=f), TestFunction(FX))
-# print(f, project_f)
-
 u = TrialFunction(T)
 v = TestFunction(T)
 mat = inner(grad(u), grad(v))
-print(mat)
 fj = Array(T, buffer=f)
 rhs = inner(v, fj)
 
-# boundary integral for x = -1
 v_bndry = TestFunction(FY)
 
 gn = Array(FY, buffer=neumann_condition)
 evaluate_x_bndry = Array(FX, buffer=FX.evaluate_basis_all(-1))
-print(evaluate_x_bndry.shape)
 project_g = inner(gn, v_bndry)
-# print(project_g)
 
 bndry_integral = np.outer(evaluate_x_bndry, project_g)
-# print(bndry_integral)
 
-# print(rhs)
-rhs += bndry_integral
-# print(rhs)
+rhs -= bndry_integral
 
 Sol = sf.la.SolverGeneric2ND(mat)
 
