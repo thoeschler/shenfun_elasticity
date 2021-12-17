@@ -22,11 +22,11 @@ def get_dimensionless_parameters(domain, boundary_conditions, body_forces,
                                  l_ref, mat_param_ref, u_ana=None):
     domain_dl = get_dimensionless_domain(domain, l_ref)
     boundary_conditions_dl = get_dimensionless_boundary_conditions(
-            boundary_conditions, l_ref, u_ref)
+        boundary_conditions, l_ref, u_ref)
     body_forces_dl = get_dimensionless_body_forces(body_forces, l_ref, u_ref,
                                                    mat_param_ref)
     material_parameters_dl = get_dimensionless_material_parameters(
-            material_parameters, mat_param_ref, l_ref)
+        material_parameters, mat_param_ref, l_ref)
 
     if u_ana is not None:
         u_ana_dl = get_dimensionless_displacement(u_ana, l_ref, u_ref)
@@ -46,12 +46,8 @@ def get_dimensional_displacement(u_hat_dimless, boundary_conditions,
 
     domain_dimless = [u_hat_dimless.function_space().spaces[i].bases[i].domain
                       for i in range(dim)]
-    domain = [
-            [
-                domain_dimless[i][j] * l_ref for j in range(2)
-                ]
-            for i in range(dim)
-        ]
+    domain = [[domain_dimless[i][j] * l_ref for j in range(2)]
+              for i in range(dim)]
 
     # vector space for solution
     vec_space = []
@@ -84,9 +80,7 @@ def get_dimensionless_material_parameters(material_parameters,
     if len(material_parameters) == 2:  # cauchy elasticity
         return tuple(np.array(material_parameters) / mat_param_ref)
     elif len(material_parameters) == 7:  # gradient elasticity
-        lame_parameters = np.array(
-                material_parameters
-                )[[0, 1]] / mat_param_ref
+        lame_parameters = np.array(material_parameters)[slice(2)] / mat_param_ref
         gradient_parameters = np.array(material_parameters)[2:] \
             / mat_param_ref / l_ref ** 2
         # wrap material parameters in a tuple
@@ -121,8 +115,7 @@ def get_dimensionless_boundary_conditions(boundary_conditions, l_ref,
                         if isinstance(component, sp.Expr):
                             for coord in component.free_symbols:
                                 tmp = tmp.replace(
-                                    coord, coord * l_ref
-                                    )
+                                    coord, coord * l_ref)
                         bc_dimless.append(tmp / u_ref)
                     else:
                         bc_dimless.append(component)
@@ -141,25 +134,15 @@ def get_dimensionless_boundary_conditions(boundary_conditions, l_ref,
                     for kind, val in condition:
                         if isinstance(val, sp.Expr):
                             for coord in val.free_symbols:
-                                val = val.replace(
-                                        coord, coord * l_ref
-                                        )
+                                val = val.replace(coord, coord * l_ref)
                         if kind == 'D':  # dirichlet bc
-                            bc_dimless[side].append(
-                                ('D', val / u_ref)
-                                )
+                            bc_dimless[side].append(('D', val / u_ref))
                         elif kind == 'N':  # neumann bc
-                            bc_dimless[side].append(
-                                ('N', val / u_ref * l_ref)
-                                )
+                            bc_dimless[side].append(('N', val / u_ref * l_ref))
                         elif kind == 'N2':  # second deivative
-                            bc_dimless[side].append(
-                                ('N2', val / u_ref * l_ref ** 2)
-                                )
+                            bc_dimless[side].append(('N2', val / u_ref * l_ref ** 2))
                         elif kind == 'N3':  # third derivative
-                            bc_dimless[side].append(
-                                ('N3', val / u_ref * l_ref ** 3)
-                                )
+                            bc_dimless[side].append(('N3', val / u_ref * l_ref ** 3))
                         else:
                             raise NotImplementedError()
 

@@ -12,7 +12,7 @@ from sympy import cos, sin, pi, sinh, cosh
 
 class DirichletTest(ElasticProblem):
     def __init__(self, N, domain, elastic_law):
-        self.name = 'DirichletTest'
+        self._name = 'DirichletTest'
         self.ell, self.h = domain[0][1], domain[1][1]
         self.u0 = self.ell / 100
         super().__init__(N, domain, elastic_law)
@@ -20,13 +20,13 @@ class DirichletTest(ElasticProblem):
     def set_analytical_solution(self):
         x, y = sp.symbols("x, y")
         u0, l, h = self.u0, self.ell, self.h
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             self.u_ana = (
                     u0 * ((1 + x / l) * (y / h) ** 2 * (1 - y / h) ** 2
                           * sin(2 * pi * x / l) * cos(3 * pi * y / h) +
                           x / l * 4 * y / h * (1 - y / h)),
                     u0 * x / l * (1 - x / l) * sin(2 * pi * y / h))
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             self.u_ana = (
                     u0 * (50 * (1 - x / l) ** 2 * (x / l) ** 2 * (y / h) ** 2
                           * (1 - y / h) ** 2 * sin(2 * pi * x / l) *
@@ -42,25 +42,25 @@ class DirichletTest(ElasticProblem):
 
     def set_boundary_conditions(self):
         x, y = sp.symbols("x, y", real=True)
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             bc = (((0., self.u0 * 4 * y / self.h * (1 - y / self.h)),
                    (0., 0.)),
                   ((0., 0.), (0., 0.)))
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             bc = (((0, self.u0 * 16 * (1 - y / self.h) ** 2 *
                     (y / self.h) ** 2, 0, 0), (0, 0, 0, 0)),
                   ((0, 0, 0, 0), (0, 0, 0, 0)))
         return bc
 
     def set_material_parameters(self):
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
             mu = E / (2 * (1 + nu))
             return lmbda, mu
 
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
@@ -72,7 +72,7 @@ class DirichletTest(ElasticProblem):
         return self.ell, self.u0, self.material_parameters[0]
 
     def postprocess(self):
-        dirs = ['results', str(self.name), str(self.elastic_law.name)]
+        dirs = ['results', str(self._name), str(self.elastic_law._name)]
         for d in dirs:
             if not os.path.exists(d):
                 os.mkdir(d)
@@ -105,7 +105,7 @@ class DirichletTest(ElasticProblem):
         output.append(fl_stress_name + '.h5')
 
         # hyper stress
-        if self.elastic_law.name == 'LinearGradientElasticity':
+        if self.elastic_law._name == 'LinearGradientElasticity':
             stress, space = self.elastic_law.compute_hyper_stresses(u)
             fl_stress_name = 'hyper_stress'
             fl_stress = sf.ShenfunFile(fl_stress_name, space,
@@ -123,7 +123,7 @@ class DirichletTest(ElasticProblem):
 
 class TensileTestOneDimensional(ElasticProblem):
     def __init__(self, N, domain, elastic_law):
-        self.name = 'TensileTestOneDimensional'
+        self._name = 'TensileTestOneDimensional'
         self.ell, self.h = domain[0][1], domain[1][1]
         self.u0 = self.ell / 100
         super().__init__(N, domain, elastic_law)
@@ -142,14 +142,14 @@ class TensileTestOneDimensional(ElasticProblem):
         return bc
 
     def set_material_parameters(self):
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
             mu = E / (2 * (1 + nu))
             return lmbda, mu
 
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
@@ -161,7 +161,7 @@ class TensileTestOneDimensional(ElasticProblem):
         return self.ell, self.u0, self.material_parameters[0]
 
     def postprocess(self):
-        dirs = ['results', str(self.name), str(self.elastic_law.name)]
+        dirs = ['results', str(self._name), str(self.elastic_law._name)]
         for d in dirs:
             if not os.path.exists(d):
                 os.mkdir(d)
@@ -194,7 +194,7 @@ class TensileTestOneDimensional(ElasticProblem):
         output.append(fl_stress_name + '.h5')
 
         # hyper stress
-        if self.elastic_law.name == 'LinearGradientElasticity':
+        if self.elastic_law._name == 'LinearGradientElasticity':
             stress, space = self.elastic_law.compute_hyper_stresses(u)
             fl_stress_name = 'hyper_stress'
             fl_stress = sf.ShenfunFile(fl_stress_name, space,
@@ -212,36 +212,29 @@ class TensileTestOneDimensional(ElasticProblem):
 
 class TensileTestClamped(ElasticProblem):
     def __init__(self, N, domain, elastic_law):
-        self.name = 'TensileTestClamped'
+        self._name = 'TensileTestClamped'
         self.ell, self.h = domain[0][1], domain[1][1]
         self.u0 = self.ell / 100
         super().__init__(N, domain, elastic_law)
 
     def set_boundary_conditions(self):
         x, y = sp.symbols("x, y", real=True)
-        if self.elastic_law.name == "LinearCauchyElasticity":
-            bc = (
-                    ((0, self.u0), None),
-                    ((0, 0), None)
-                    )
-        elif self.elastic_law.name == "LinearGradientElasticity":
-            bc = ((
-                    {'left': [('D', 0.), ('N', 0.)],
-                        'right': [('D', self.u0)]},
-                    None),
-                  ((0., 0.), None)
-                  )
+        if self.elastic_law._name == "LinearCauchyElasticity":
+            bc = (((0, self.u0), None), ((0, 0), None))
+        elif self.elastic_law._name == "LinearGradientElasticity":
+            bc = (({'left': [('D', 0.), ('N', 0.)], 'right': [('D', self.u0)]},
+                   None), ((0., 0.), None))
         return bc
 
     def set_material_parameters(self):
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
             mu = E / (2 * (1 + nu))
             return lmbda, mu
 
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
@@ -253,7 +246,7 @@ class TensileTestClamped(ElasticProblem):
         return self.ell, self.u0, self.material_parameters[0]
 
     def postprocess(self):
-        dirs = ['results', str(self.name), str(self.elastic_law.name)]
+        dirs = ['results', str(self._name), str(self.elastic_law._name)]
         for d in dirs:
             if not os.path.exists(d):
                 os.mkdir(d)
@@ -286,7 +279,7 @@ class TensileTestClamped(ElasticProblem):
         output.append(fl_stress_name + '.h5')
 
         # hyper stress
-        if self.elastic_law.name == 'LinearGradientElasticity':
+        if self.elastic_law._name == 'LinearGradientElasticity':
             stress, space = self.elastic_law.compute_hyper_stresses(u)
             fl_stress_name = 'hyper_stress'
             fl_stress = sf.ShenfunFile(fl_stress_name, space,
@@ -304,7 +297,7 @@ class TensileTestClamped(ElasticProblem):
 
 class ShearTest(ElasticProblem):
     def __init__(self, N, domain, elastic_law):
-        self.name = 'ShearTest'
+        self._name = 'ShearTest'
         self.ell, self.h = domain[0][1], domain[1][1]
         self.u0 = self.ell / 10
         super().__init__(N, domain, elastic_law)
@@ -313,10 +306,10 @@ class ShearTest(ElasticProblem):
         assert hasattr(self, "material_parameters")
         x, y = sp.symbols("x, y")
         u0, h = self.u0, self.h
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             lmbda, mu = self.material_parameters
             self.u_ana = (y / h * u0, 0.)
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
             zeta = sp.sqrt((c1 + c4) / mu)
             A1 = u0 * sinh(h / zeta) / \
@@ -329,12 +322,12 @@ class ShearTest(ElasticProblem):
                           A4 * cosh(y / zeta), 0.)
 
     def set_boundary_conditions(self):
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             bc = (
                     (None, (0, self.u0)),
                     (None, (0, 0))
                     )
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             bc = (
                     (None, {'left': [('D', 0.), ('N', 0.)],
                             'right': [('D', self.u0)]}),
@@ -343,14 +336,14 @@ class ShearTest(ElasticProblem):
         return bc
 
     def set_material_parameters(self):
-        if self.elastic_law.name == "LinearCauchyElasticity":
+        if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
             mu = E / (2 * (1 + nu))
             return lmbda, mu
 
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
@@ -362,7 +355,7 @@ class ShearTest(ElasticProblem):
         return self.ell, self.u0, self.material_parameters[0]
 
     def postprocess(self):
-        dirs = ['results', str(self.name), str(self.elastic_law.name)]
+        dirs = ['results', str(self._name), str(self.elastic_law._name)]
         for d in dirs:
             if not os.path.exists(d):
                 os.mkdir(d)
@@ -395,7 +388,7 @@ class ShearTest(ElasticProblem):
         output.append(fl_stress_name + '.h5')
 
         # hyper stress
-        if self.elastic_law.name == 'LinearGradientElasticity':
+        if self.elastic_law._name == 'LinearGradientElasticity':
             stress, space = self.elastic_law.compute_hyper_stresses(u)
             fl_stress_name = 'hyper_stress'
             fl_stress = sf.ShenfunFile(fl_stress_name, space,
@@ -424,7 +417,7 @@ def test_dirichlet():
 
         error = compute_numerical_error(u_ana_dl, u_hat_dl)
         DirichletProblem.postprocess()
-        print(f'Error {elastic_law.name}:\t {error}\t N = {N}')
+        print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
     print("Finished Dirichlet test!")
 
 
@@ -441,7 +434,7 @@ def test_tensile_test_one_dimensional():
 
         error = compute_numerical_error(u_ana_dl, u_hat_dl)
         TensileTest.postprocess()
-        print(f'Error {elastic_law.name}:\t {error}\t N = {N}')
+        print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
     print("Finished tensile test (one dimensional)!")
 
 
@@ -477,7 +470,7 @@ def test_shear_test():
         error = np.linalg.norm(error_center)
         Shear.postprocess()
 
-        print(f'Error {elastic_law.name}:\t {error}\t N = {N}')
+        print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
     print("Finished tensile test (clamped)!")
 
 

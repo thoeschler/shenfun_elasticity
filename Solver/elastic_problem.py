@@ -12,9 +12,9 @@ class ElasticProblem:
         self.setup_problem()
 
     def get_solver(self):
-        return ElasticSolver(self.N, self.domain_dl, self.bc_dl,
-                             self.material_parameters_dl, self.body_forces_dl,
-                             self.elastic_law)
+        return ElasticSolver(self.N, self._dimless_domain, self._dimless_bc,
+                             self._dimless_material_parameters,
+                             self._dimless_body_forces, self.elastic_law)
 
     def setup_problem(self):
         assert hasattr(self, "set_boundary_conditions")
@@ -41,8 +41,8 @@ class ElasticProblem:
             self.mat_param_ref = self.material_parameters[0]
 
         # dl means dimensionless
-        self.domain_dl, self.bc_dl, self.body_forces_dl, \
-            self.material_parameters_dl = get_dimensionless_parameters(
+        self._dimless_domain, self._dimless_bc, self._dimless_body_forces, \
+            self._dimless_material_parameters = get_dimensionless_parameters(
                     self.domain, self.bc, self.body_forces,
                     self.material_parameters, self.u_ref, self.l_ref,
                     self.mat_param_ref)
