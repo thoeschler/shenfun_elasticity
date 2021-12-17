@@ -90,7 +90,6 @@ class LinearCauchyElasticity:
 
     def dw_int(self, u, v):
         assert isinstance(u, sf.TrialFunction)
-        assert u.num_components() < 3, '3D and higher not possible yet'
         assert isinstance(v, sf.TestFunction)
         assert hasattr(self, "_material_parameters")
         assert len(self._material_parameters) == self._n_material_parameters
@@ -115,6 +114,15 @@ class LinearCauchyElasticity:
     def set_material_parameters(self, material_parameters):
         assert len(material_parameters) == self._n_material_parameters
         self._material_parameters = material_parameters
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def material_parameters(self):
+        assert hasattr(self, "_material_parameters")
+        return self._material_parameters
 
 
 class LinearGradientElasticity:
@@ -220,7 +228,6 @@ class LinearGradientElasticity:
 
     def dw_int(self, u, v):
         assert isinstance(u, sf.TrialFunction)
-        assert u.num_components() < 3, '3D and higher not possible yet'
         assert isinstance(v, sf.TestFunction)
         assert hasattr(self, "_material_parameters")
         assert len(self._material_parameters) == self._n_material_parameters
@@ -317,6 +324,10 @@ class LinearGradientElasticity:
     def set_material_parameters(self, material_parameters):
         assert len(material_parameters) == self._n_material_parameters
         self._material_parameters = material_parameters
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def material_parameters(self):

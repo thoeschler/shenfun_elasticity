@@ -38,39 +38,6 @@ def get_dimensionless_parameters(domain, boundary_conditions, body_forces,
             material_parameters_dl
 
 
-def get_dimensional_displacement(u_hat_dimless, boundary_conditions,
-                                 u_ref, l_ref):
-    dim = len(u_hat_dimless)
-    N = [u_hat_dimless.function_space().spaces[0].bases[i].N
-         for i in range(dim)]
-
-    domain_dimless = [u_hat_dimless.function_space().spaces[i].bases[i].domain
-                      for i in range(dim)]
-    domain = [[domain_dimless[i][j] * l_ref for j in range(2)]
-              for i in range(dim)]
-
-    # vector space for solution
-    vec_space = []
-    for i in range(dim):  # nb of displacement components
-        tens_space = []
-        for j in range(dim):  # nb of FunctionSpaces for each component
-            basis = sf.FunctionSpace(N[j], domain=domain[j], family='legendre',
-                                     bc=boundary_conditions[i][j])
-            tens_space.append(basis)
-        vec_space.append(sf.TensorProductSpace(sf.comm, tuple(tens_space)))
-
-    V = sf.VectorSpace(vec_space)
-
-    # actual solution (same coefficients, different vector space)
-    u_hat = sf.Function(V)
-
-    for i in range(dim):
-        # u has the same expansions coefficients as u_dimless
-        u_hat[i] = u_ref * u_hat_dimless[i]
-
-    return u_hat
-
-
 def get_dimensionless_domain(domain, l_ref):
     return tuple(np.array(domain) / l_ref)
 
