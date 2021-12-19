@@ -1,22 +1,5 @@
 import shenfun as sf
 from shenfun import inner, comm, Function
-from enum import auto, Enum
-
-
-class DisplacementBCType(Enum):
-    fixed = auto()
-    fixed_component = auto()
-    constant = auto()
-    constant_component = auto()
-    function = auto()
-    function_component = auto()
-
-
-class TractionBCType(Enum):
-    constant = auto()
-    constant_component = auto()
-    function = auto()
-    function_component = auto()
 
 
 class ElasticSolver:

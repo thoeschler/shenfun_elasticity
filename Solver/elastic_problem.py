@@ -3,6 +3,27 @@ from shenfun_elasticity.Solver.utilities import get_dimensionless_parameters
 from mpi4py_fft import generate_xdmf
 import shenfun as sf
 import os
+from copy import deepcopy
+from enum import auto, Enum
+
+
+class DisplacementBC(Enum):
+    fixed = auto()
+    fixed_component = auto()
+    fixed_gradient = auto()
+    fixed_gradient_component = auto()
+    function = auto()
+    function_component = auto()
+
+
+class TractionBC(Enum):
+    function = auto()
+    function_component = auto()
+
+
+class DoubleTractionBC(Enum):
+    function = auto()
+    function_component = auto()
 
 
 class ElasticProblem:
@@ -13,6 +34,70 @@ class ElasticProblem:
         self._domain = domain
         self._elastic_law = elastic_law
         self._setup_problem()
+
+    def _cleanup_boundary_conditions(self):
+        for component in range(self._dim):
+            for direction in range(self._dim):
+                # check whether the bc contains both dirichlet and neumann bcs
+                # for each side (treated differently in shenfun)
+                bc = self._processed_bcs[component][direction]
+                both_dirichlet_and_neumann = True
+                for side in ('left', 'right'):
+                    if len(bc[side]) == 0:
+                        both_dirichlet_and_neumann = False
+                        break
+                    types = [bc[side][comp][0]
+                             for comp in range(len(bc[side]))]
+                    if not all([bc_type in types for bc_type in ('D', 'N')]):
+                        both_dirichlet_and_neumann = False
+                        break
+                if both_dirichlet_and_neumann:
+                    # replace by a tuple with dirichlet conditions in the first
+                    # two entries and the neumann conditions in the last two
+                    dirichlet_bcs = bc['left'][0][1], bc['right'][0][1]
+                    neumann_bcs = bc['left'][1][1], bc['right'][1][1]
+                    self._processed_bcs[component][direction] = (
+                        *dirichlet_bcs, *neumann_bcs)
+        for component in range(self._dim):
+            for direction in range(self._dim):
+                # check for bcs that fix a single value: those can not be
+                # implemented via a dictionary
+                bc = self._processed_bcs[component][direction]
+                if not isinstance(bc, dict):
+                    continue
+                if sum([len(val) for val in bc.values()]) == 1:
+                    if len(bc['left']) > 0:
+                        single_bc = bc['left'][0]
+                        index = 0
+                    else:
+                        single_bc = bc['right'][0]
+                        index = 1
+                    new_bc_format = [None, None]
+                    # for now the boundary condition for only one side
+                    # needs to be of dirichlet type
+                    assert single_bc[0] == 'D'
+                    new_bc_format[index] = single_bc[1]
+                    self._processed_bcs[component][direction] = tuple(
+                        new_bc_format)
+            # remove empty lists
+            for component in range(self._dim):
+                for direction in range(self._dim):
+                    bc = deepcopy(self._processed_bcs[component][direction])
+                    if not isinstance(bc, dict):
+                        continue
+                    for side, value in bc.items():
+                        if value == []:
+                            self._processed_bcs[component][
+                                direction].pop(side)
+            # replace empty dictionaries
+            for component in range(self._dim):
+                for direction in range(self._dim):
+                    if not isinstance(bc, dict):
+                        continue
+                    # check whether dictionary is empty
+                    if not self._processed_bcs[component][direction]:
+                        self._processed_bcs[component][direction] = None
+        self._bcs = self._processed_bcs
 
     def get_dimensional_solution(self):
         assert hasattr(self, "_solution")
@@ -86,6 +171,58 @@ class ElasticProblem:
         self.write_xdmf_file(output)
         os.chdir('../../..')
 
+    def _process_boundary_conditions(self):
+        assert hasattr(self, "_bcs")
+        if self._dim == 2:
+            for boundary, bc in self._bcs.items():
+                assert boundary in ('right', 'top', 'left', 'bottom')
+                assert isinstance(bc, list)
+            map_boundary_to_direction_index = {'right': 0, 'top': 1, 'left': 0,
+                                               'bottom': 1}
+            map_boundary_to_side = {'right': 'right', 'top': 'right',
+                                    'left': 'left', 'bottom': 'left'}
+        # base dictionary for boundary conditions in shenfun style
+        bc_base = {'left': list(), 'right': list()}
+        # repeat base dictionary for every component and direction
+        self._processed_bcs = [[deepcopy(bc_base) for _ in range(self._dim)]
+                               for _ in range(self._dim)]
+        self._traction_bcs = []
+        for boundary, bcs in self._bcs.items():
+            direction = map_boundary_to_direction_index[boundary]
+            side = map_boundary_to_side[boundary]
+            for bc in bcs:
+                if len(bc) == 2:
+                    bc_type, value = bc
+                elif len(bc) == 3:
+                    bc_type, component, value = bc
+                # create bcs in shenfun style
+                if bc_type is DisplacementBC.fixed:
+                    for component in range(self._dim):
+                        self._processed_bcs[
+                            component][direction][side].append(('D', 0.))
+                elif bc_type is DisplacementBC.fixed_gradient:
+                    for component in range(self._dim):
+                        self._processed_bcs[
+                            component][direction][side].append(('N', 0.))
+                elif bc_type is DisplacementBC.fixed_component:
+                    self._processed_bcs[
+                        component][direction][side].append(('D', 0.))
+                elif bc_type is DisplacementBC.fixed_gradient_component:
+                    self._processed_bcs[
+                        component][direction][side].append(('N', 0.))
+                elif bc_type is DisplacementBC.function:
+                    for component, val in enumerate(value):
+                        self._processed_bcs[
+                            component][direction][side].append(('D', val))
+                elif bc_type is DisplacementBC.function_component:
+                    self._processed_bcs[
+                        component][direction][side].append(('D', value))
+                elif bc_type is TractionBC.function:
+                    self._traction.append(bc)
+                elif bc_type in TractionBC.function_component:
+                    self._traction.append(bc)
+        self._cleanup_boundary_conditions()
+
     def _setup_problem(self):
         assert hasattr(self, "set_boundary_conditions")
         assert hasattr(self, "set_material_parameters")
@@ -95,6 +232,7 @@ class ElasticProblem:
             self.set_analytical_solution()
 
         self.set_boundary_conditions()
+        self._process_boundary_conditions()
         self._elastic_law.set_material_parameters(self._material_parameters)
 
         if hasattr(self, "set_body_forces"):
@@ -107,7 +245,7 @@ class ElasticProblem:
             self._u_ref = 1
             self._mat_param_ref = self._material_parameters[0]
 
-        # dl means dimensionless
+        # get dimensionless values for solver
         self._dimless_domain, self._dimless_bcs, self._dimless_body_forces, \
             self._dimless_material_parameters = get_dimensionless_parameters(
                     self._domain, self._bcs, self._body_forces,
@@ -137,6 +275,7 @@ class ElasticProblem:
     def material_parameters(self):
         return self._material_parameters
 
+    @property
     def name(self):
         assert hasattr(self, "_name")
         return self._name
