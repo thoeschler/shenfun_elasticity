@@ -1,7 +1,7 @@
-from shenfun_elasticity.Solver.elastic_problem import ElasticProblem
-from shenfun_elasticity.Solver.elastic_law import LinearCauchyElasticity, \
+from shenfun_elasticity.solver.elastic_problem import ElasticProblem
+from shenfun_elasticity.solver.elastic_law import LinearCauchyElasticity, \
     LinearGradientElasticity
-from shenfun_elasticity.Solver.utilities import compute_numerical_error, \
+from shenfun_elasticity.solver.utilities import compute_numerical_error, \
     get_dimensionless_displacement
 import numpy as np
 import sympy as sp
