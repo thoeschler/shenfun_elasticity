@@ -3,7 +3,7 @@ from shenfun_elasticity.solver.utilities import get_dimensionless_parameters
 from mpi4py_fft import generate_xdmf
 import shenfun as sf
 import os
-from copy import deepcopy
+from copy import copy
 from enum import auto, Enum
 
 
@@ -35,7 +35,7 @@ class ElasticProblem:
         self._elastic_law = elastic_law
         self._setup_problem()
 
-    def _cleanup_boundary_conditions(self):
+    def _organize_boundary_conditions(self):
         assert hasattr(self, '_processed_bcs')
         for component in range(self._dim):
             for direction in range(self._dim):
@@ -68,7 +68,7 @@ class ElasticProblem:
                     if len(bc['left']) > 0:
                         single_bc = bc['left'][0]
                         index = 0
-                    elif len(bc['left']) > 0:
+                    elif len(bc['right']) > 0:
                         single_bc = bc['right'][0]
                         index = 1
                     else:
@@ -82,7 +82,7 @@ class ElasticProblem:
             # remove empty lists
             for component in range(self._dim):
                 for direction in range(self._dim):
-                    bc = deepcopy(self._processed_bcs[component][direction])
+                    bc = copy(self._processed_bcs[component][direction])
                     if not isinstance(bc, dict):
                         continue
                     for side, value in bc.items():
@@ -180,10 +180,9 @@ class ElasticProblem:
                                                'bottom': 1}
             map_boundary_to_side = {'right': 'right', 'top': 'right',
                                     'left': 'left', 'bottom': 'left'}
-        # base dictionary for boundary conditions in shenfun style
-        bc_base = {'left': list(), 'right': list()}
+
         # repeat base dictionary for every component and direction
-        self._processed_bcs = [[deepcopy(bc_base) for _ in range(self._dim)]
+        self._processed_bcs = [[{'left': list(), 'right': list()} for _ in range(self._dim)]
                                for _ in range(self._dim)]
         self._traction_bcs = []
         for boundary, bcs in self._bcs.items():
@@ -200,7 +199,7 @@ class ElasticProblem:
                     for c in range(self._dim):
                         self._processed_bcs[c][d][side].append(('D', 0.))
                 elif bc_type is DisplacementBC.fixed_gradient:
-                    for component in range(self._dim):
+                    for c in range(self._dim):
                         self._processed_bcs[c][d][side].append(('N', 0.))
                 elif bc_type is DisplacementBC.fixed_component:
                     self._processed_bcs[c][d][side].append(('D', 0.))
@@ -215,7 +214,7 @@ class ElasticProblem:
                     self._traction.append(bc)
                 elif bc_type in TractionBC.function_component:
                     self._traction.append(bc)
-        self._cleanup_boundary_conditions()
+        self._organize_boundary_conditions()
 
     def _setup_problem(self):
         assert hasattr(self, "set_boundary_conditions")
