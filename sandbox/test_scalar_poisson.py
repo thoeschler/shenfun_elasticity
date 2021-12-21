@@ -1,5 +1,5 @@
-from shenfun import FunctionSpace, Array, project, TrialFunction, TestFunction, \
-    TensorProductSpace, comm, inner, grad, Function, div
+from shenfun import FunctionSpace, Array, TrialFunction, TestFunction, \
+    TensorProductSpace, comm, inner, grad, Function
 import sympy as sp
 import shenfun as sf
 import matplotlib.pyplot as plt
