@@ -1,8 +1,8 @@
-from shenfun_elasticity.Solver.elastic_problem import ElasticProblem, \
-    DisplacementBC, TractionBC
-from shenfun_elasticity.Solver.elastic_law import LinearCauchyElasticity, \
+from shenfun_elasticity.solver.elastic_problem import ElasticProblem
+from shenfun_elasticity.solver.elastic_problem import DisplacementBC, TractionBC
+from shenfun_elasticity.solver.elastic_law import LinearCauchyElasticity, \
     LinearGradientElasticity
-from shenfun_elasticity.Solver.utilities import compute_numerical_error, \
+from shenfun_elasticity.solver.utilities import compute_numerical_error, \
     get_dimensionless_displacement
 import numpy as np
 import sympy as sp
@@ -26,7 +26,7 @@ class DirichletTest(ElasticProblem):
                           * sin(2 * pi * x / l) * cos(3 * pi * y / h) +
                           x / l * 4 * y / h * (1 - y / h)),
                     u0 * x / l * (1 - x / l) * sin(2 * pi * y / h))
-        elif self.elastic_law.name == "LinearGradientElasticity":
+        elif self.elastic_law._name == "LinearGradientElasticity":
             self.u_ana = (
                     u0 * (50 * (1 - x / l) ** 2 * (x / l) ** 2 * (y / h) ** 2
                           * (1 - y / h) ** 2 * sin(2 * pi * x / l) *
@@ -66,15 +66,15 @@ class DirichletTest(ElasticProblem):
         if self.elastic_law.name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
         elif self.elastic_law.name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             c1 = c2 = c3 = c4 = c5 = 0.1
             self._material_parameters = lmbda, mu, c1, c2, c3, c4, c5
 
@@ -109,15 +109,15 @@ class TensileTestOneDimensional(ElasticProblem):
         if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
         elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             c1 = c2 = c3 = c4 = c5 = 0.1
             self._material_parameters = lmbda, mu, c1, c2, c3, c4, c5
 
@@ -149,15 +149,15 @@ class TensileTestClamped(ElasticProblem):
         if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
         elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             c1 = c2 = c3 = c4 = c5 = 0.1
             self._material_parameters = lmbda, mu, c1, c2, c3, c4, c5
 
@@ -211,15 +211,15 @@ class ShearTest(ElasticProblem):
         if self.elastic_law._name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
         elif self.elastic_law._name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
-            mu = E / (2 * (1 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            mu = E / (2.0 * (1.0 + nu))
             c1 = c2 = c3 = c4 = c5 = 0.1
             self._material_parameters = lmbda, mu, c1, c2, c3, c4, c5
 

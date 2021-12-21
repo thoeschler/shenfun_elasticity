@@ -1,5 +1,5 @@
-from shenfun_elasticity.Solver.solver import ElasticSolver
-from shenfun_elasticity.Solver.utilities import get_dimensionless_parameters
+from shenfun_elasticity.solver.solver import ElasticSolver
+from shenfun_elasticity.solver.utilities import get_dimensionless_parameters
 from mpi4py_fft import generate_xdmf
 import shenfun as sf
 import os
