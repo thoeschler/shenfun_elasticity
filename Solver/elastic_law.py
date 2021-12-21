@@ -1,18 +1,19 @@
 import shenfun as sf
 import sympy as sp
 import numpy as np
-import itertools as it
 from shenfun import inner, div, grad, Dx
 
 
 class LinearCauchyElasticity:
     def __init__(self):
-        self.name = "LinearCauchyElasticity"
-        self.nb_material_parameters = 2
+        self._name = "LinearCauchyElasticity"
+        self._n_material_parameters = 2
 
     def check_with_pde(self, u_hat, material_parameters, body_forces):
         assert isinstance(u_hat, sf.Function)
-        assert len(material_parameters) == self.nb_material_parameters
+        assert len(material_parameters) == self._n_material_parameters
+        for comp in body_forces:
+            assert isinstance(comp, (sp.Expr, float, int))
 
         lambd, mu = material_parameters
         V = u_hat.function_space().get_orthogonal()
@@ -29,11 +30,13 @@ class LinearCauchyElasticity:
         return error / scale
 
     def compute_body_forces(self, u):
-        assert hasattr(self, "material_parameters")
-        assert len(self.material_parameters) == self.nb_material_parameters
+        for comp in u:
+            assert isinstance(comp, (sp.Expr, float, int))
+        assert hasattr(self, "_material_parameters")
+        assert len(self._material_parameters) == self._n_material_parameters
 
         dim = len(u)
-        lmbda, mu = self.material_parameters
+        lmbda, mu = self._material_parameters
         x, y, z = sp.symbols("x,y,z")
         coord = [x, y, z]
 
@@ -59,8 +62,9 @@ class LinearCauchyElasticity:
 
         space = u_hat[0].function_space().get_orthogonal()
         dim = len(space.bases)
+        # number of dofs for each component
         N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
-        lmbda, mu = self.material_parameters
+        lmbda, mu = self._material_parameters
 
         # displacement gradient
         H = np.empty(shape=(dim, dim, *N))
@@ -87,11 +91,11 @@ class LinearCauchyElasticity:
     def dw_int(self, u, v):
         assert isinstance(u, sf.TrialFunction)
         assert isinstance(v, sf.TestFunction)
-        assert hasattr(self, "material_parameters")
-        assert len(self.material_parameters) == self.nb_material_parameters
+        assert hasattr(self, "_material_parameters")
+        assert len(self._material_parameters) == self._n_material_parameters
 
         self.dim = u.dimensions
-        lmbda, mu = self.material_parameters
+        lmbda, mu = self._material_parameters
 
         A = inner(mu * grad(u), grad(v))
         B = []
@@ -108,17 +112,29 @@ class LinearCauchyElasticity:
         return dw_int
 
     def set_material_parameters(self, material_parameters):
-        self.material_parameters = material_parameters
+        assert len(material_parameters) == self._n_material_parameters
+        self._material_parameters = material_parameters
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def material_parameters(self):
+        assert hasattr(self, "_material_parameters")
+        return self._material_parameters
 
 
 class LinearGradientElasticity:
     def __init__(self):
-        self.name = "LinearGradientElasticity"
-        self.nb_material_parameters = 7
+        self._name = "LinearGradientElasticity"
+        self._n_material_parameters = 7
 
     def check_with_pde(self, u_hat, material_parameters, body_forces):
         assert isinstance(u_hat, sf.Function)
-        assert len(material_parameters) == self.nb_material_parameters
+        assert len(material_parameters) == self._n_material_parameters
+        for comp in body_forces:
+            assert isinstance(comp, (sp.Expr, float, int))
 
         lambd, mu, c1, c2, c3, c4, c5 = material_parameters
         V = u_hat.function_space().get_orthogonal()
@@ -141,8 +157,9 @@ class LinearGradientElasticity:
 
         space = u_hat[0].function_space().get_orthogonal()
         dim = len(space.bases)
+        # number of dofs for each component
         N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
-        lmbda, mu = self.material_parameters[slice(2)]
+        lmbda, mu = self._material_parameters[slice(2)]
 
         # displacement gradient
         H = np.empty(shape=(dim, dim, *N))
@@ -165,13 +182,13 @@ class LinearGradientElasticity:
         T = 2.0 * mu * E + lmbda * trE * identity
 
         return T, space
-    
+
     def compute_hyper_stresses(self, u_hat):
         assert isinstance(u_hat, sf.Function)
 
         space = u_hat[0].function_space()
         dim = len(space.bases)
-        c1, c2, c3, c4, c5 = self.material_parameters[2:]
+        c1, c2, c3, c4, c5 = self._material_parameters[2:]
         N = [u_hat.function_space().spaces[0].bases[i].N for i in range(dim)]
 
         Laplace = np.zeros(shape=(dim, *N))
@@ -197,31 +214,26 @@ class LinearGradientElasticity:
         identity = np.identity(dim)
 
         # hyper stresses
-        T = c1 * np.swapaxes(
-                np.tensordot(identity, Laplace, axes=0), 0, 2
-                ) \
-            + c2 / 2 * (np.tensordot(identity, Laplace, axes=0) +
-                        np.swapaxes(np.tensordot(identity, Laplace, axes=0),
-                                     1, 2)
-                        ) \
-            + c3 / 2 * (np.tensordot(identity, GradDiv, axes=0) +
-                        np.swapaxes(np.tensordot(identity, GradDiv, axes=0),
-                                    1, 2)
-                        ) \
+        T = c1 * np.swapaxes(np.tensordot(identity, Laplace, axes=0), 0, 2) \
+            + c2 / 2.0 * (np.tensordot(identity, Laplace, axes=0) +
+                          np.swapaxes(np.tensordot(identity, Laplace, axes=0), 1, 2)
+                          ) \
+            + c3 / 2.0 * (np.tensordot(identity, GradDiv, axes=0) +
+                          np.swapaxes(np.tensordot(identity, GradDiv, axes=0), 1, 2)
+                          ) \
             + c4 * GradGrad \
-            + c5 / 2 * (np.swapaxes(GradGrad, 0, 1) + 
-                        np.swapaxes(GradGrad, 0, 2))
+            + c5 / 2.0 * (np.swapaxes(GradGrad, 0, 1) + np.swapaxes(GradGrad, 0, 2))
 
         return T, space
 
     def dw_int(self, u, v):
         assert isinstance(u, sf.TrialFunction)
         assert isinstance(v, sf.TestFunction)
-        assert hasattr(self, "material_parameters")
-        assert len(self.material_parameters) == self.nb_material_parameters
+        assert hasattr(self, "_material_parameters")
+        assert len(self._material_parameters) == self._n_material_parameters
 
         self.dim = u.dimensions
-        lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
+        lmbda, mu, c1, c2, c3, c4, c5 = self._material_parameters
         dw_int = []
 
         if c1 != 0.0:
@@ -250,6 +262,8 @@ class LinearGradientElasticity:
                             dw_int += mat
                         else:
                             dw_int += [mat]
+
+        # add the classical cauchy-terms
         dw_int += inner(mu * grad(u), grad(v))
 
         for i in range(self.dim):
@@ -264,12 +278,13 @@ class LinearGradientElasticity:
         return dw_int
 
     def compute_body_forces(self, u):
-        assert isinstance(u, tuple)
-        assert hasattr(self, "material_parameters")
-        assert len(self.material_parameters) == self.nb_material_parameters
+        for comp in u:
+            assert isinstance(comp, (sp.Expr, float, int))
+        assert hasattr(self, "_material_parameters")
+        assert len(self._material_parameters) == self._n_material_parameters
 
         dim = len(u)
-        lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
+        lmbda, mu, c1, c2, c3, c4, c5 = self._material_parameters
 
         x, y, z = sp.symbols("x,y,z")
         coord = [x, y, z]
@@ -307,4 +322,13 @@ class LinearGradientElasticity:
         return tuple(body_forces)
 
     def set_material_parameters(self, material_parameters):
-        self.material_parameters = material_parameters
+        assert len(material_parameters) == self._n_material_parameters
+        self._material_parameters = material_parameters
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def material_parameters(self):
+        return self._material_parameters
