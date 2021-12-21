@@ -34,4 +34,4 @@ jobs:
         export PYTHONPATH=$(pwd)/
         conda install pytest
         conda install pytest-cov
-        pytest --cov=shenfun_elasticity
+        pytest --cov=shenfun_elasticity --ignore=sandbox/
