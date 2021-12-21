@@ -36,6 +36,7 @@ class ElasticProblem:
         self._setup_problem()
 
     def _cleanup_boundary_conditions(self):
+        assert hasattr(self, '_processed_bcs')
         for component in range(self._dim):
             for direction in range(self._dim):
                 # check whether the bc contains both dirichlet and neumann bcs
@@ -46,8 +47,7 @@ class ElasticProblem:
                     if len(bc[side]) == 0:
                         both_dirichlet_and_neumann = False
                         break
-                    types = [bc[side][comp][0]
-                             for comp in range(len(bc[side]))]
+                    types = [bc[side][comp][0] for comp in range(len(bc[side]))]
                     if not all([bc_type in types for bc_type in ('D', 'N')]):
                         both_dirichlet_and_neumann = False
                         break
@@ -56,8 +56,7 @@ class ElasticProblem:
                     # two entries and the neumann conditions in the last two
                     dirichlet_bcs = bc['left'][0][1], bc['right'][0][1]
                     neumann_bcs = bc['left'][1][1], bc['right'][1][1]
-                    self._processed_bcs[component][direction] = (
-                        *dirichlet_bcs, *neumann_bcs)
+                    self._processed_bcs[component][direction] = (*dirichlet_bcs, *neumann_bcs)
         for component in range(self._dim):
             for direction in range(self._dim):
                 # check for bcs that fix a single value: those can not be
@@ -69,16 +68,17 @@ class ElasticProblem:
                     if len(bc['left']) > 0:
                         single_bc = bc['left'][0]
                         index = 0
-                    else:
+                    elif len(bc['left']) > 0:
                         single_bc = bc['right'][0]
                         index = 1
+                    else:
+                        raise ValueError()
                     new_bc_format = [None, None]
                     # for now the boundary condition for only one side
                     # needs to be of dirichlet type
                     assert single_bc[0] == 'D'
                     new_bc_format[index] = single_bc[1]
-                    self._processed_bcs[component][direction] = tuple(
-                        new_bc_format)
+                    self._processed_bcs[component][direction] = tuple(new_bc_format)
             # remove empty lists
             for component in range(self._dim):
                 for direction in range(self._dim):
@@ -87,8 +87,7 @@ class ElasticProblem:
                         continue
                     for side, value in bc.items():
                         if value == []:
-                            self._processed_bcs[component][
-                                direction].pop(side)
+                            self._processed_bcs[component][direction].pop(side)
             # replace empty dictionaries
             for component in range(self._dim):
                 for direction in range(self._dim):
@@ -188,35 +187,30 @@ class ElasticProblem:
                                for _ in range(self._dim)]
         self._traction_bcs = []
         for boundary, bcs in self._bcs.items():
-            direction = map_boundary_to_direction_index[boundary]
+            # direction
+            d = map_boundary_to_direction_index[boundary]
             side = map_boundary_to_side[boundary]
             for bc in bcs:
                 if len(bc) == 2:
                     bc_type, value = bc
                 elif len(bc) == 3:
-                    bc_type, component, value = bc
+                    bc_type, c, value = bc
                 # create bcs in shenfun style
                 if bc_type is DisplacementBC.fixed:
-                    for component in range(self._dim):
-                        self._processed_bcs[
-                            component][direction][side].append(('D', 0.))
+                    for c in range(self._dim):
+                        self._processed_bcs[c][d][side].append(('D', 0.))
                 elif bc_type is DisplacementBC.fixed_gradient:
                     for component in range(self._dim):
-                        self._processed_bcs[
-                            component][direction][side].append(('N', 0.))
+                        self._processed_bcs[c][d][side].append(('N', 0.))
                 elif bc_type is DisplacementBC.fixed_component:
-                    self._processed_bcs[
-                        component][direction][side].append(('D', 0.))
+                    self._processed_bcs[c][d][side].append(('D', 0.))
                 elif bc_type is DisplacementBC.fixed_gradient_component:
-                    self._processed_bcs[
-                        component][direction][side].append(('N', 0.))
+                    self._processed_bcs[c][d][side].append(('N', 0.))
                 elif bc_type is DisplacementBC.function:
-                    for component, val in enumerate(value):
-                        self._processed_bcs[
-                            component][direction][side].append(('D', val))
+                    for c, val in enumerate(value):
+                        self._processed_bcs[c][d][side].append(('D', val))
                 elif bc_type is DisplacementBC.function_component:
-                    self._processed_bcs[
-                        component][direction][side].append(('D', value))
+                    self._processed_bcs[c][d][side].append(('D', value))
                 elif bc_type is TractionBC.function:
                     self._traction.append(bc)
                 elif bc_type in TractionBC.function_component:
