@@ -1,7 +1,6 @@
 from shenfun import FunctionSpace, Array, TrialFunction, TestFunction, \
-    TensorProductSpace, comm, inner, grad, Function, VectorSpace, BlockMatrix
+    TensorProductSpace, comm, inner, grad, VectorSpace, BlockMatrix
 import sympy as sp
-import matplotlib.pyplot as plt
 import numpy as np
 
 x, y = sp.symbols("x, y")
