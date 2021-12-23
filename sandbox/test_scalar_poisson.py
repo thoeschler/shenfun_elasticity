@@ -25,7 +25,7 @@ rhs = inner(v, fj)
 v_bndry = TestFunction(FY)
 
 gn = Array(FY, buffer=neumann_condition)
-evaluate_x_bndry = Array(FX, buffer=FX.evaluate_basis_all(-1))
+evaluate_x_bndry = FX.evaluate_basis_all(-1)
 project_g = inner(gn, v_bndry)
 
 bndry_integral = np.outer(evaluate_x_bndry, project_g)
