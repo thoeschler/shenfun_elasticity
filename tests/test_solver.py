@@ -1,4 +1,5 @@
 from shenfun_elasticity.solver.elastic_problem import ElasticProblem
+from shenfun_elasticity.solver.elastic_problem import DisplacementBC, TractionBC
 from shenfun_elasticity.solver.elastic_law import LinearCauchyElasticity, \
     LinearGradientElasticity
 from shenfun_elasticity.solver.utilities import compute_numerical_error, \
@@ -41,13 +42,25 @@ class DirichletTest(ElasticProblem):
 
     def set_boundary_conditions(self):
         x, y = sp.symbols("x, y", real=True)
+        u0, h = self.u0, self.h
         if self.elastic_law.name == "LinearCauchyElasticity":
-            self._bcs = (((0., self.u0 * 4 * y / self.h * (1 - y / self.h)),
-                          (0., 0.)), ((0., 0.), (0., 0.)))
+            self._bcs = {'right': [(DisplacementBC.function_component, 0,
+                                    u0 * 4 * y / h * (1 - y / h)),
+                                   (DisplacementBC.fixed_component, 1, None)],
+                         'top': [(DisplacementBC.fixed, None)],
+                         'left': [(DisplacementBC.fixed, None)],
+                         'bottom': [(DisplacementBC.fixed, None)]}
         elif self.elastic_law.name == "LinearGradientElasticity":
-            self._bcs = (((0, self.u0 * 16 * (1 - y / self.h) ** 2 *
-                           (y / self.h) ** 2, 0, 0), (0, 0, 0, 0)),
-                         ((0, 0, 0, 0), (0, 0, 0, 0)))
+            self._bcs = {'right': [(DisplacementBC.function_component, 0,
+                                    u0 * 16 * (1 - y / h) ** 2 * (y / h) ** 2),
+                                   (DisplacementBC.fixed_component, 1, None),
+                                   (DisplacementBC.fixed_gradient, None)],
+                         'top': [(DisplacementBC.fixed, None),
+                                 (DisplacementBC.fixed_gradient, None)],
+                         'left': [(DisplacementBC.fixed, None),
+                                  (DisplacementBC.fixed_gradient, None)],
+                         'bottom': [(DisplacementBC.fixed, None),
+                                    (DisplacementBC.fixed_gradient, None)]}
 
     def set_material_parameters(self):
         if self.elastic_law.name == "LinearCauchyElasticity":
@@ -83,11 +96,14 @@ class TensileTestOneDimensional(ElasticProblem):
         lmbda, mu = self.material_parameters[slice(2)]
         nu = lmbda / (2 * (lmbda + mu))
         x, y = sp.symbols("x, y")
-        u0, l, h = self.u0, self.ell, self.h
-        self.u_ana = (x / l * u0, nu / (1 - nu) * u0 / l * (h - y))
+        u0, ell = self.u0, self.ell
+        self.u_ana = (x / ell * u0, - nu / (1 - nu) * u0 / ell * y)
 
     def set_boundary_conditions(self):
-        self._bcs = (((0., self.u0), None), (None, (None, 0.)))
+        self._bcs = {'right': [(DisplacementBC.function_component, 0,
+                                self.u0)],
+                     'left': [(DisplacementBC.fixed_component, 0, None)],
+                     'bottom': [(DisplacementBC.fixed_component, 1, None)]}
 
     def set_material_parameters(self):
         if self.elastic_law._name == "LinearCauchyElasticity":
@@ -120,11 +136,14 @@ class TensileTestClamped(ElasticProblem):
 
     def set_boundary_conditions(self):
         x, y = sp.symbols("x, y", real=True)
-        if self.elastic_law._name == "LinearCauchyElasticity":
-            self._bcs = (((0, self.u0), None), ((0, 0), None))
-        elif self.elastic_law._name == "LinearGradientElasticity":
-            self._bcs = (({'left': [('D', 0.), ('N', 0.)],
-                           'right': [('D', self.u0)]}, None), ((0., 0.), None))
+        if self.elastic_law.name == "LinearCauchyElasticity":
+            self._bcs = {'right': [(DisplacementBC.function, (self.u0, 0.))],
+                         'left': [(DisplacementBC.fixed, None)]}
+        elif self.elastic_law.name == "LinearGradientElasticity":
+            self._bcs = {'right': [(DisplacementBC.function, (self.u0, 0.))],
+                         'left': [(DisplacementBC.fixed, None),
+                                  (DisplacementBC.fixed_gradient_component, 0,
+                                   None)]}
 
     def set_material_parameters(self):
         if self.elastic_law._name == "LinearCauchyElasticity":
@@ -176,10 +195,17 @@ class ShearTest(ElasticProblem):
 
     def set_boundary_conditions(self):
         if self.elastic_law.name == "LinearCauchyElasticity":
-            self._bcs = ((None, (0, self.u0)), (None, (0, 0)))
+            self._bcs = {'top': [(DisplacementBC.function_component, 0,
+                                  self.u0),
+                                 (DisplacementBC.function_component, 1, 0.)],
+                         'bottom': [(DisplacementBC.fixed, None)]}
         elif self.elastic_law.name == "LinearGradientElasticity":
-            self._bcs = ((None, {'left': [('D', 0.), ('N', 0.)],
-                                 'right': [('D', self.u0)]}), (None, (0., 0.)))
+            self._bcs = {'top': [(DisplacementBC.function_component, 0,
+                                  self.u0),
+                                 (DisplacementBC.function_component, 1, 0.)],
+                         'bottom': [(DisplacementBC.fixed, None),
+                                    (DisplacementBC.fixed_gradient_component,
+                                     0, None)]}
 
     def set_material_parameters(self):
         if self.elastic_law._name == "LinearCauchyElasticity":
@@ -205,15 +231,15 @@ class ShearTest(ElasticProblem):
 
 def test_dirichlet():
     N = (30, 30)
-    domain = ((0., 10.), (0., 5))
+    domain = ((0., 10.), (0., 5.))
     print("Starting Dirichlet test ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
         DirichletProblem = DirichletTest(N, domain, elastic_law)
 
         DirichletProblem.solve()
         u_ana_dl = get_dimensionless_displacement(DirichletProblem.u_ana,
-                                                  DirichletProblem.ell,
-                                                  DirichletProblem.u0)
+                                                  DirichletProblem._l_ref,
+                                                  DirichletProblem._u_ref)
 
         error = compute_numerical_error(u_ana_dl, DirichletProblem.solution)
         DirichletProblem.postprocess()
@@ -274,7 +300,8 @@ def test_shear_test():
     print("Finished tensile test (clamped)!")
 
 
-test_dirichlet()
-test_tensile_test_one_dimensional()
-test_tensile_test_clamped()
-test_shear_test()
+if __name__ == "__main__":
+    test_dirichlet()
+    test_tensile_test_one_dimensional()
+    test_tensile_test_clamped()
+    test_shear_test()
