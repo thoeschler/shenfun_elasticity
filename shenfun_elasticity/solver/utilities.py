@@ -17,12 +17,14 @@ def compute_numerical_error(u_ana, u_hat):
     return error
 
 
-def get_dimensionless_parameters(domain, boundary_conditions, body_forces,
-                                 material_parameters, u_ref,
+def get_dimensionless_parameters(domain, boundary_conditions, traction,
+                                 body_forces, material_parameters, u_ref,
                                  l_ref, mat_param_ref, u_ana=None):
     domain_dl = get_dimensionless_domain(domain, l_ref)
     boundary_conditions_dl = get_dimensionless_boundary_conditions(
         boundary_conditions, l_ref, u_ref)
+    traction_dl = get_dimensionless_traction(traction, l_ref, u_ref,
+                                             mat_param_ref)
     body_forces_dl = get_dimensionless_body_forces(body_forces, l_ref, u_ref,
                                                    mat_param_ref)
     material_parameters_dl = get_dimensionless_material_parameters(
@@ -30,12 +32,12 @@ def get_dimensionless_parameters(domain, boundary_conditions, body_forces,
 
     if u_ana is not None:
         u_ana_dl = get_dimensionless_displacement(u_ana, l_ref, u_ref)
-        return domain_dl, boundary_conditions_dl, body_forces_dl, \
-            material_parameters_dl, u_ana_dl
+        return domain_dl, boundary_conditions_dl, traction_dl, \
+            body_forces_dl, material_parameters_dl, u_ana_dl
 
     else:
-        return domain_dl, boundary_conditions_dl, body_forces_dl, \
-            material_parameters_dl
+        return domain_dl, boundary_conditions_dl, traction_dl, \
+            body_forces_dl, material_parameters_dl
 
 
 def get_dimensionless_domain(domain, l_ref):
@@ -150,3 +152,15 @@ def get_dimensionless_displacement(displacement, l_ref, u_ref):
         ua[i] /= u_ref
 
     return tuple(ua)
+
+
+def get_dimensionless_traction(traction, l_ref, u_ref, mat_param_ref):
+    if not traction:
+        return traction
+    dimless_traction = []
+    for boundary, c, value in traction:
+        if isinstance(value, sp.Expr):
+            for coord in value.free_symbols:
+                value = value.replace(coord, coord * l_ref)
+        dimless_traction.append((boundary, c, value / mat_param_ref / u_ref * l_ref))
+    return dimless_traction

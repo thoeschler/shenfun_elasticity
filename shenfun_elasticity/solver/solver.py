@@ -1,15 +1,17 @@
 import shenfun as sf
-from shenfun import inner, comm, Function
+import numpy as np
+from shenfun import inner, comm, Function, Array
 
 
 class ElasticSolver:
-    def __init__(self, N, domain, bcs, material_parameters, body_forces,
-                 elastic_law):
+    def __init__(self, N, domain, bcs, traction_bcs, material_parameters,
+                 body_forces, elastic_law):
         self._dim = len(N)
         assert self._dim == 2, 'Solver only works for 2D-problems'
         self._N = N
         self._domain = domain
         self._bcs = bcs
+        self._traction_bcs = traction_bcs
         self._material_parameters = material_parameters
         self._elastic_law = elastic_law
         self._body_forces = body_forces
@@ -17,6 +19,7 @@ class ElasticSolver:
 
     def _setup_function_space(self):
         self._nonhomogeneous_bcs = False
+        self._function_spaces = []
         vec_space = []
         for i in range(self._dim):
             tens_space = []
@@ -27,6 +30,7 @@ class ElasticSolver:
                 if basis.has_nonhomogeneous_bcs:
                     self._nonhomogeneous_bcs = True
                 tens_space.append(basis)
+            self._function_spaces.append(tens_space)
             vec_space.append(sf.TensorProductSpace(comm, tuple(tens_space)))
 
         self._V = sf.VectorSpace(vec_space)
@@ -49,6 +53,40 @@ class ElasticSolver:
             self._dw_ext = inner(v, body_forces_quad)
 
     def solve(self):
+        if self._dim == 2:
+            map_boundary_to_component_index = {'right': 0, 'top': 1, 'left': 0,
+                                               'bottom': 1}
+            map_boundary_to_start_end_index = {'right': 1, 'top': 1, 'left': 0,
+                                               'bottom': 0}
+        if self._traction_bcs:
+            boundary_traction_term = Function(self._V.get_orthogonal())
+
+            # b: boundary, c: component
+            for b, c, value in self._traction_bcs:
+                if self._dim == 2:
+                    side_index = map_boundary_to_component_index[b]
+                    bdry_basis_index = 1 if side_index == 0 else 0
+                    boundary_basis = self._function_spaces[c][bdry_basis_index]
+                    start_or_end_index = map_boundary_to_start_end_index[b]
+                    # test function for boundary integral
+                    v_boundary = sf.TestFunction(boundary_basis)
+                    if isinstance(value, (float, int)):
+                        trac = Array(boundary_basis, val=value)
+                    else:
+                        trac = Array(boundary_basis, buffer=value)
+                    evaluate_on_boundary = self._function_spaces[c][
+                        side_index].evaluate_basis_all(
+                            self._domain[side_index][start_or_end_index])
+                    project_traction = inner(trac, v_boundary)
+                    if side_index == 0:
+                        boundary_traction_term[c] += np.outer(
+                            evaluate_on_boundary, project_traction)
+                    elif side_index == 1:
+                        boundary_traction_term[c] += np.outer(
+                            project_traction, evaluate_on_boundary)
+                    else:
+                        raise ValueError()
+
         if self._nonhomogeneous_bcs:
             # get boundary matrices
             bc_mats = sf.extract_bc_matrices([self._dw_int])
@@ -62,6 +100,8 @@ class ElasticSolver:
             add_to_rhs = Function(self._V)
             add_to_rhs = BM.matvec(-uh_hat, add_to_rhs)
             self._dw_ext += add_to_rhs
+            if self._traction_bcs:
+                self._dw_ext += boundary_traction_term
             # homogeneous part of solution
             u_hat = M.solve(self._dw_ext)
             # solution
@@ -69,6 +109,8 @@ class ElasticSolver:
         else:
             # BlockMatrix
             M = sf.BlockMatrix(self._dw_int)
+            if self._traction_bcs:
+                self._dw_ext += boundary_traction_term
             # solution
             u_hat = M.solve(self._dw_ext)
 
