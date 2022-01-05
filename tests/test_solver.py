@@ -85,10 +85,16 @@ class DirichletTest(ElasticProblem):
 
 
 class TensileTestOneDimensional(ElasticProblem):
-    def __init__(self, N, domain, elastic_law):
-        self._name = 'TensileTestOneDimensional'
+    def __init__(self, N, domain, elastic_law, name_suffix):
+        self._name_suffix = name_suffix
+        self._name = 'TensileTestOneDimensional' + self._name_suffix
         self.ell, self.h = domain[0][1], domain[1][1]
-        self.u0 = self.ell / 100
+        if self._name_suffix == 'DisplacementSteered':
+            self.u0 = self.ell / 100
+        elif self._name_suffix == 'TractionSteered':
+            self.sigma0 = 100
+        else:
+            raise ValueError()
         super().__init__(N, domain, elastic_law)
 
     def set_analytical_solution(self):
@@ -96,24 +102,41 @@ class TensileTestOneDimensional(ElasticProblem):
         lmbda, mu = self.material_parameters[slice(2)]
         nu = lmbda / (2 * (lmbda + mu))
         x, y = sp.symbols("x, y")
-        u0, ell = self.u0, self.ell
-        self.u_ana = (x / ell * u0, - nu / (1 - nu) * u0 / ell * y)
+        if self._name_suffix == 'DisplacementSteered':
+            assert hasattr(self, "u0")
+            assert hasattr(self, "ell")
+            u0, ell = self.u0, self.ell
+            nu_hat = nu / (1 - nu)
+            self.u_ana = (x / ell * u0, - nu_hat * u0 / ell * y)
+        elif self._name_suffix == 'TractionSteered':
+            assert hasattr(self, "sigma0")
+            E = mu * (3 * lmbda + 2 * mu) / (lmbda + mu)
+            E_hat = E / (1 - nu ** 2)
+            nu_hat = nu / (1 - nu)
+            self.u_ana = (self.sigma0 / E_hat * x,
+                          - nu_hat * self.sigma0 / E_hat * y)
 
     def set_boundary_conditions(self):
-        self._bcs = {'right': [(DisplacementBC.function_component, 0,
-                                self.u0)],
-                     'left': [(DisplacementBC.fixed_component, 0, None)],
-                     'bottom': [(DisplacementBC.fixed_component, 1, None)]}
+        if self._name_suffix == 'DisplacementSteered':
+            self._bcs = {'right': [(DisplacementBC.function_component, 0,
+                                    self.u0)],
+                         'left': [(DisplacementBC.fixed_component, 0, None)],
+                         'bottom': [(DisplacementBC.fixed_component, 1, None)]}
+        elif self._name_suffix == 'TractionSteered':
+            self._bcs = {'right': [(TractionBC.function_component, 0,
+                                    self.sigma0)],
+                         'left': [(DisplacementBC.fixed_component, 0, None)],
+                         'bottom': [(DisplacementBC.fixed_component, 1, None)]}
 
     def set_material_parameters(self):
-        if self.elastic_law._name == "LinearCauchyElasticity":
+        if self.elastic_law.name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
             mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
-        elif self.elastic_law._name == "LinearGradientElasticity":
+        elif self.elastic_law.name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
@@ -123,7 +146,10 @@ class TensileTestOneDimensional(ElasticProblem):
 
     def set_nondim_parameters(self):
         self._l_ref = self.ell
-        self._u_ref = self.u0
+        if hasattr(self, "u0"):
+            self._u_ref = self.u0
+        else:
+            self._u_ref = 1
         self._mat_param_ref = self.material_parameters[0]
 
 
@@ -249,18 +275,20 @@ def test_dirichlet():
 
 def test_tensile_test_one_dimensional():
     N = (30, 30)
-    domain = ((0., 10.), (0., 5))
+    domain = ((0., 30.), (0., 5))
     print("Starting tensile test (one dimensional) ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
-        TensileTest = TensileTestOneDimensional(N, domain, elastic_law)
-        TensileTest.solve()
-        u_ana_dl = get_dimensionless_displacement(TensileTest.u_ana,
-                                                  TensileTest._l_ref,
-                                                  TensileTest._u_ref)
+        for name_suffix in ('DisplacementSteered', 'TractionSteered'):
+            TensileTest = TensileTestOneDimensional(N, domain, elastic_law,
+                                                    name_suffix)
+            TensileTest.solve()
+            u_ana_dl = get_dimensionless_displacement(TensileTest.u_ana,
+                                                      TensileTest._l_ref,
+                                                      TensileTest._u_ref)
 
-        error = compute_numerical_error(u_ana_dl, TensileTest.solution)
-        TensileTest.postprocess()
-        print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
+            error = compute_numerical_error(u_ana_dl, TensileTest.solution)
+            TensileTest.postprocess()
+            print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
     print("Finished tensile test (one dimensional)!")
 
 
