@@ -7,9 +7,9 @@ x, y = sp.symbols("x, y")
 
 # manufactured solution with:
 # x - component:
-# ux'(x = - 1) != 0, ux(x = 1) = 0, ux(y = - 1) = 0, ux(y = 1) = 0
+# ux'(x = - 1) = -4 (y - 1) (y + 1), ux(x = 1) = 0, ux(y = - 1) = 0, ux(y = 1) = 0
 # y - component:
-# uy(x = - 1) = 0, uy(x = 1) = 0, ux(y = - 1) = 0, ux'(y = 1) != 0
+# uy(x = - 1) = 0, uy(x = 1) = 0, ux(y = - 1) = 0, ux'(y = 1) = 2 (x -1)**2
 ua = ((x - 1) ** 2 * (y - 1) * (y + 1),
       5 * (y + 1) ** 2 * (x - 1) * (x + 1))
 f = (- ua[0].diff(x, 2) - ua[0].diff(y, 2),
