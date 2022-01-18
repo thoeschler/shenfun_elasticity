@@ -92,7 +92,7 @@ class TensileTestOneDimensional(ElasticProblem):
         if self._name_suffix == 'DisplacementSteered':
             self.u0 = self.ell / 100
         elif self._name_suffix == 'TractionSteered':
-            self.sigma0 = 100
+            self.sigma0 = 10
         else:
             raise ValueError()
         super().__init__(N, domain, elastic_law)
@@ -172,14 +172,14 @@ class TensileTestClamped(ElasticProblem):
                                    None)]}
 
     def set_material_parameters(self):
-        if self.elastic_law._name == "LinearCauchyElasticity":
+        if self.elastic_law.name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
             mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
-        elif self.elastic_law._name == "LinearGradientElasticity":
+        elif self.elastic_law.name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
@@ -194,54 +194,73 @@ class TensileTestClamped(ElasticProblem):
 
 
 class ShearTest(ElasticProblem):
-    def __init__(self, N, domain, elastic_law):
-        self._name = 'ShearTest'
+    def __init__(self, N, domain, elastic_law, name_suffix):
+        self._name_suffix = name_suffix
+        self._name = 'ShearTest' + self._name_suffix
         self.ell, self.h = domain[0][1], domain[1][1]
-        self.u0 = self.ell / 10
+        if self._name_suffix == 'DisplacementSteered':
+            self.u0 = self.ell / 10
+        elif self._name_suffix == 'TractionSteered':
+            self.tau0 = 10
+        else:
+            raise ValueError()
         super().__init__(N, domain, elastic_law)
 
     def set_analytical_solution(self):
         assert hasattr(self, "material_parameters")
         x, y = sp.symbols("x, y")
-        u0, h = self.u0, self.h
         if self.elastic_law.name == "LinearCauchyElasticity":
             lmbda, mu = self.material_parameters
-            self.u_ana = (y / h * u0, 0.)
+            if self._name_suffix == 'DisplacementSteered':
+                self.u_ana = (y / self.h * self.u0, 0.)
+            elif self._name_suffix == 'TractionSteered':
+                assert hasattr(self, "tau0")
+                self.u_ana = (self.tau0 / mu * y, 0.)
         elif self.elastic_law.name == "LinearGradientElasticity":
-            lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
-            zeta = sp.sqrt((c1 + c4) / mu)
-            A1 = u0 * sinh(h / zeta) / \
-                (sinh(h / zeta) - h / zeta * cosh(h / zeta))
-            A2 = - u0 / zeta * cosh(h / zeta) / \
-                (sinh(h / zeta) - h / zeta * cosh(h / zeta))
-            A3 = - zeta * A2
-            A4 = - A1
-            self.u_ana = (A1 + A2 * y + A3 * sinh(y / zeta) +
-                          A4 * cosh(y / zeta), 0.)
+            if self._name_suffix == 'DisplacementSteered':
+                u0, h = self.u0, self.h
+                lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
+                zeta = sp.sqrt((c1 + c4) / mu)
+                A1 = u0 * sinh(h / zeta) / \
+                    (sinh(h / zeta) - h / zeta * cosh(h / zeta))
+                A2 = - u0 / zeta * cosh(h / zeta) / \
+                    (sinh(h / zeta) - h / zeta * cosh(h / zeta))
+                A3 = - zeta * A2
+                A4 = - A1
+                self.u_ana = (A1 + A2 * y + A3 * sinh(y / zeta) +
+                              A4 * cosh(y / zeta), 0.)
+            else:
+                raise NotImplementedError()
 
     def set_boundary_conditions(self):
         if self.elastic_law.name == "LinearCauchyElasticity":
-            self._bcs = {'top': [(DisplacementBC.function_component, 0,
-                                  self.u0),
-                                 (DisplacementBC.function_component, 1, 0.)],
-                         'bottom': [(DisplacementBC.fixed, None)]}
+            if self._name_suffix == 'DisplacementSteered':
+                self._bcs = {'top': [(DisplacementBC.function_component, 0, self.u0),
+                                     (DisplacementBC.function_component, 1, 0.)],
+                             'bottom': [(DisplacementBC.fixed, None)]}
+            elif self._name_suffix == 'TractionSteered':
+                self._bcs = {'top': [(TractionBC.function_component, 0, self.tau0),
+                                     (DisplacementBC.function_component, 1, 0.)],
+                             'bottom': [(DisplacementBC.fixed, None)]}
         elif self.elastic_law.name == "LinearGradientElasticity":
-            self._bcs = {'top': [(DisplacementBC.function_component, 0,
-                                  self.u0),
-                                 (DisplacementBC.function_component, 1, 0.)],
-                         'bottom': [(DisplacementBC.fixed, None),
-                                    (DisplacementBC.fixed_gradient_component,
-                                     0, None)]}
+            if self._name_suffix == 'DisplacementSteered':
+                self._bcs = {'top': [(DisplacementBC.function_component, 0, self.u0),
+                                     (DisplacementBC.function_component, 1, 0.)],
+                             'bottom': [(DisplacementBC.fixed, None),
+                                        (DisplacementBC.fixed_gradient_component,
+                                         0, None)]}
+            else:
+                raise NotImplementedError()
 
     def set_material_parameters(self):
-        if self.elastic_law._name == "LinearCauchyElasticity":
+        if self.elastic_law.name == "LinearCauchyElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
             mu = E / (2.0 * (1.0 + nu))
             self._material_parameters = lmbda, mu
 
-        elif self.elastic_law._name == "LinearGradientElasticity":
+        elif self.elastic_law.name == "LinearGradientElasticity":
             E = 400.
             nu = 0.4
             lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
@@ -251,7 +270,10 @@ class ShearTest(ElasticProblem):
 
     def set_nondim_parameters(self):
         self._l_ref = self.ell
-        self._u_ref = self.u0
+        if hasattr(self, "u0"):
+            self._u_ref = self.u0
+        else:
+            self._u_ref = 1
         self._mat_param_ref = self.material_parameters[0]
 
 
@@ -274,8 +296,8 @@ def test_dirichlet():
 
 
 def test_tensile_test_one_dimensional():
-    N = (30, 30)
-    domain = ((0., 30.), (0., 5))
+    N = (5, 5)
+    domain = ((0., 10.), (0., 10))
     print("Starting tensile test (one dimensional) ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
         for name_suffix in ('DisplacementSteered', 'TractionSteered'):
@@ -285,7 +307,6 @@ def test_tensile_test_one_dimensional():
             u_ana_dl = get_dimensionless_displacement(TensileTest.u_ana,
                                                       TensileTest._l_ref,
                                                       TensileTest._u_ref)
-
             error = compute_numerical_error(u_ana_dl, TensileTest.solution)
             TensileTest.postprocess()
             print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
@@ -310,8 +331,10 @@ def test_shear_test():
     N = (round(length_ratio / 5) * 30, 30)
     domain = ((0., ell), (0., h))
     print("Starting shear test ...")
-    for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
-        Shear = ShearTest(N, domain, elastic_law)
+    for elastic_law, name_suffix in ((LinearCauchyElasticity(), 'DisplacementSteered'),
+                                     (LinearCauchyElasticity(), 'TractionSteered'),
+                                     (LinearGradientElasticity(), 'DisplacementSteered')):
+        Shear = ShearTest(N, domain, elastic_law, name_suffix)
         Shear.solve()
         u_ana_dl = get_dimensionless_displacement(Shear.u_ana,
                                                   Shear._l_ref,
