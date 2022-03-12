@@ -42,21 +42,7 @@ class ElasticProblem:
                 # check whether the bc contains both dirichlet and neumann bcs
                 # for each side (treated differently in shenfun)
                 bc = self._processed_bcs[component][direction]
-                both_dirichlet_and_neumann = True
-                for side in ('left', 'right'):
-                    if len(bc[side]) == 0:
-                        both_dirichlet_and_neumann = False
-                        break
-                    types = [bc[side][comp][0] for comp in range(len(bc[side]))]
-                    if not all([bc_type in types for bc_type in ('D', 'N')]):
-                        both_dirichlet_and_neumann = False
-                        break
-                if both_dirichlet_and_neumann:
-                    # replace by a tuple with dirichlet conditions in the first
-                    # two entries and the neumann conditions in the last two
-                    dirichlet_bcs = bc['left'][0][1], bc['right'][0][1]
-                    neumann_bcs = bc['left'][1][1], bc['right'][1][1]
-                    self._processed_bcs[component][direction] = (*dirichlet_bcs, *neumann_bcs)
+
         for component in range(self._dim):
             for direction in range(self._dim):
                 # check for bcs that fix a single value: those can not be
