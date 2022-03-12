@@ -77,14 +77,11 @@ class ElasticSolver:
                     evaluate_on_boundary = self._function_spaces[c][
                         side_index].evaluate_basis_all(start_or_end_index)
                     project_traction = inner(trac, v_boundary)
-                    # fix jacobi determinant via weight
-                    space = self._function_spaces[0][side_index]
-                    weight = 2 / (space.domain[1] - space.domain[0])
                     if side_index == 0:
-                        boundary_traction_term[c] += weight * np.outer(
+                        boundary_traction_term[c] += np.outer(
                             evaluate_on_boundary, project_traction)
                     elif side_index == 1:
-                        boundary_traction_term[c] += weight * np.outer(
+                        boundary_traction_term[c] += np.outer(
                             project_traction, evaluate_on_boundary)
                     else:
                         raise ValueError()
