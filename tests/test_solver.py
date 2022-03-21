@@ -101,32 +101,64 @@ class TensileTestOneDimensional(ElasticProblem):
         assert hasattr(self, "material_parameters")
         lmbda, mu = self.material_parameters[slice(2)]
         nu = lmbda / (2 * (lmbda + mu))
-        x, y = sp.symbols("x, y")
-        if self._name_suffix == 'DisplacementSteered':
-            assert hasattr(self, "u0")
-            assert hasattr(self, "ell")
-            u0, ell = self.u0, self.ell
-            nu_hat = nu / (1 - nu)
-            self.u_ana = (x / ell * u0, - nu_hat * u0 / ell * y)
-        elif self._name_suffix == 'TractionSteered':
-            assert hasattr(self, "sigma0")
-            E = mu * (3 * lmbda + 2 * mu) / (lmbda + mu)
-            E_hat = E / (1 - nu ** 2)
-            nu_hat = nu / (1 - nu)
-            self.u_ana = (self.sigma0 / E_hat * x,
-                          - nu_hat * self.sigma0 / E_hat * y)
+        if self._dim == 2:
+            x, y = sp.symbols("x, y")
+            if self._name_suffix == 'DisplacementSteered':
+                assert hasattr(self, "u0")
+                assert hasattr(self, "ell")
+                u0, ell = self.u0, self.ell
+                nu_hat = nu / (1 - nu)
+                self.u_ana = (x / ell * u0, - nu_hat * u0 / ell * y)
+            elif self._name_suffix == 'TractionSteered':
+                assert hasattr(self, "sigma0")
+                E = mu * (3 * lmbda + 2 * mu) / (lmbda + mu)
+                E_hat = E / (1 - nu ** 2)
+                nu_hat = nu / (1 - nu)
+                self.u_ana = (self.sigma0 / E_hat * x,
+                              - nu_hat * self.sigma0 / E_hat * y)
+        elif self._dim == 3:
+            x, y, z = sp.symbols("x, y, z")
+            if self._name_suffix == 'DisplacementSteered':
+                assert hasattr(self, "u0")
+                assert hasattr(self, "ell")
+                u0, ell = self.u0, self.ell
+                self.u_ana = (x / ell * u0, - nu * u0 / ell * y,
+                              - nu * u0 / ell * z)
+            elif self._name_suffix == 'TractionSteered':
+                assert hasattr(self, "sigma0")
+                E = mu * (3 * lmbda + 2 * mu) / (lmbda + mu)
+                self.u_ana = (self.sigma0 / E * x, - nu * self.sigma0 / E * y,
+                              - nu * self.sigma0 / E * z)
+        else:
+            raise ValueError()
 
     def set_boundary_conditions(self):
-        if self._name_suffix == 'DisplacementSteered':
-            self._bcs = {'right': [(DisplacementBC.function_component, 0,
-                                    self.u0)],
-                         'left': [(DisplacementBC.fixed_component, 0, None)],
-                         'bottom': [(DisplacementBC.fixed_component, 1, None)]}
-        elif self._name_suffix == 'TractionSteered':
-            self._bcs = {'right': [(TractionBC.function_component, 0,
-                                    self.sigma0)],
-                         'left': [(DisplacementBC.fixed_component, 0, None)],
-                         'bottom': [(DisplacementBC.fixed_component, 1, None)]}
+        if self._dim == 2:
+            if self._name_suffix == 'DisplacementSteered':
+                self._bcs = {'right': [(DisplacementBC.function_component, 0,
+                                        self.u0)],
+                             'left': [(DisplacementBC.fixed_component, 0, None)],
+                             'bottom': [(DisplacementBC.fixed_component, 1, None)]}
+            elif self._name_suffix == 'TractionSteered':
+                self._bcs = {'right': [(TractionBC.function_component, 0,
+                                        self.sigma0)],
+                             'left': [(DisplacementBC.fixed_component, 0, None)],
+                             'bottom': [(DisplacementBC.fixed_component, 1, None)]}
+        elif self._dim == 3:
+            if self._name_suffix == 'DisplacementSteered':
+                self._bcs = {'right': [(DisplacementBC.function_component, 0,
+                                        self.u0)],
+                             'left': [(DisplacementBC.fixed_component, 0, None)],
+                             'bottom': [(DisplacementBC.fixed_component, 2, None)],
+                             'back': [(DisplacementBC.fixed_component, 1, None)]}
+            elif self._name_suffix == 'TractionSteered':
+                self._bcs = {'right': [(TractionBC.function_component, 0,
+                                        self.sigma0)],
+                             'left': [(DisplacementBC.fixed_component, 0, None)],
+                             'bottom': [(DisplacementBC.fixed_component, 2, None)],
+                             'back': [(DisplacementBC.fixed_component, 1, None)]}
+        else:
+            return ValueError()
 
     def set_material_parameters(self):
         if self.elastic_law.name == "LinearCauchyElasticity":
@@ -296,20 +328,22 @@ def test_dirichlet():
 
 
 def test_tensile_test_one_dimensional():
-    N = (5, 5)
-    domain = ((0., 10.), (0., 10))
+    N_vals = ((5, 5), (5, 5, 5))
+    domain_vals = (((0., 10.), (0., 10.)), # 2d
+                   ((0., 10.), (0., 10.), (0., 10.))) # 3d
     print("Starting tensile test (one dimensional) ...")
     for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
         for name_suffix in ('DisplacementSteered', 'TractionSteered'):
-            TensileTest = TensileTestOneDimensional(N, domain, elastic_law,
-                                                    name_suffix)
-            TensileTest.solve()
-            u_ana_dl = get_dimensionless_displacement(TensileTest.u_ana,
-                                                      TensileTest._l_ref,
-                                                      TensileTest._u_ref)
-            error = compute_numerical_error(u_ana_dl, TensileTest.solution)
-            TensileTest.postprocess()
-            print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
+            for N, domain in zip(N_vals, domain_vals):
+                TensileTest = TensileTestOneDimensional(N, domain, elastic_law,
+                                                        name_suffix)
+                TensileTest.solve()
+                u_ana_dl = get_dimensionless_displacement(TensileTest.u_ana,
+                                                          TensileTest._l_ref,
+                                                          TensileTest._u_ref)
+                error = compute_numerical_error(u_ana_dl, TensileTest.solution)
+                #TensileTest.postprocess()
+                print(f'Error {elastic_law._name}:\t {error}\t N = {N}')
     print("Finished tensile test (one dimensional)!")
 
 
