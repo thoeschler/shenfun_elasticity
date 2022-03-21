@@ -86,31 +86,10 @@ class ElasticSolver:
                     else:
                         raise ValueError()
 
-        if self._nonhomogeneous_bcs:
-            # get boundary matrices
-            bc_mats = sf.extract_bc_matrices([self._dw_int])
-            # BlockMatrix for homogeneous part
-            M = sf.BlockMatrix(self._dw_int)
-            # BlockMatrix for inhomogeneous part
-            BM = sf.BlockMatrix(bc_mats)
-            # inhomogeneous part of solution
-            uh_hat = Function(self._V).set_boundary_dofs()
-            # pass boundary_matrices to rhs
-            add_to_rhs = Function(self._V)
-            add_to_rhs = BM.matvec(-uh_hat, add_to_rhs)
-            self._dw_ext += add_to_rhs
-            if self._traction_bcs:
-                self._dw_ext += boundary_traction_term
-            # homogeneous part of solution
-            u_hat = M.solve(self._dw_ext)
-            # solution
-            u_hat += uh_hat
-        else:
-            # BlockMatrix
-            M = sf.BlockMatrix(self._dw_int)
-            if self._traction_bcs:
-                self._dw_ext += boundary_traction_term
-            # solution
-            u_hat = M.solve(self._dw_ext)
+        M = sf.BlockMatrix(self._dw_int)
+        if self._traction_bcs:
+            self._dw_ext += boundary_traction_term
+        u_hat = M.solve(self._dw_ext)
+
 
         return u_hat
