@@ -12,7 +12,7 @@ def compute_numerical_error(u_ana, u_hat):
     # subtract numerical solution
     error_array -= u_hat.backward()
     # compute integral error
-    error = np.sqrt(sf.inner((1, 1), error_array ** 2))
+    error = np.sqrt(sf.inner(tuple([1] * V.num_components()), error_array ** 2))
 
     return error
 

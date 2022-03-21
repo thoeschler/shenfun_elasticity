@@ -7,7 +7,6 @@ class ElasticSolver:
     def __init__(self, N, domain, bcs, traction_bcs, material_parameters,
                  body_forces, elastic_law):
         self._dim = len(N)
-        assert self._dim == 2, 'Solver only works for 2D-problems'
         self._N = N
         self._domain = domain
         self._bcs = bcs

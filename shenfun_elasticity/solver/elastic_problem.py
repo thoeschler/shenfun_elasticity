@@ -39,17 +39,10 @@ class ElasticProblem:
         assert hasattr(self, '_processed_bcs')
         for component in range(self._dim):
             for direction in range(self._dim):
-                # check whether the bc contains both dirichlet and neumann bcs
-                # for each side (treated differently in shenfun)
-                bc = self._processed_bcs[component][direction]
-
-        for component in range(self._dim):
-            for direction in range(self._dim):
                 # check for bcs that fix a single value: those can not be
                 # implemented via a dictionary
-                bc = self._processed_bcs[component][direction]
-                if not isinstance(bc, dict):
-                    continue
+                bc = copy(self._processed_bcs[component][direction])
+                assert isinstance(bc, dict)
                 if sum([len(val) for val in bc.values()]) == 1:
                     if len(bc['left']) > 0:
                         single_bc = bc['left'][0]
@@ -65,23 +58,25 @@ class ElasticProblem:
                     assert single_bc[0] == 'D'
                     new_bc_format[index] = single_bc[1]
                     self._processed_bcs[component][direction] = tuple(new_bc_format)
-            # remove empty lists
-            for component in range(self._dim):
-                for direction in range(self._dim):
-                    bc = copy(self._processed_bcs[component][direction])
-                    if not isinstance(bc, dict):
-                        continue
-                    for side, value in bc.items():
-                        if value == []:
-                            self._processed_bcs[component][direction].pop(side)
-            # replace empty dictionaries
-            for component in range(self._dim):
-                for direction in range(self._dim):
-                    if not isinstance(bc, dict):
-                        continue
-                    # check whether dictionary is empty
-                    if not self._processed_bcs[component][direction]:
-                        self._processed_bcs[component][direction] = None
+        # remove empty lists
+        for component in range(self._dim):
+            for direction in range(self._dim):
+                bc = copy(self._processed_bcs[component][direction])
+                if not isinstance(bc, dict):
+                    continue
+                for side, value in bc.items():
+                    if value == []:
+                        self._processed_bcs[component][direction].pop(side)
+
+        # replace empty dictionaries
+        for component in range(self._dim):
+            for direction in range(self._dim):
+                bc = copy(self._processed_bcs[component][direction])
+                if not isinstance(bc, dict):
+                    continue
+                # check whether dictionary is empty
+                if not bc:
+                    self._processed_bcs[component][direction] = None
         self._bcs = self._processed_bcs
 
     def get_dimensional_solution(self):
@@ -163,11 +158,22 @@ class ElasticProblem:
             for boundary, bc in self._bcs.items():
                 assert boundary in ('right', 'top', 'left', 'bottom')
                 assert isinstance(bc, list)
-            map_boundary_to_direction_index = {'right': 0, 'top': 1, 'left': 0,
-                                               'bottom': 1}
+            map_boundary_to_direction_index = {'left': 0, 'right': 0,
+                                               'bottom': 1, 'top': 1}
             map_boundary_to_side = {'right': 'right', 'top': 'right',
                                     'left': 'left', 'bottom': 'left'}
-
+        elif self._dim == 3:
+            for boundary, bc in self._bcs.items():
+                assert boundary in ('right', 'top', 'left', 'bottom', 'back', 'front')
+                assert isinstance(bc, list)
+            map_boundary_to_direction_index = {'left': 0, 'right': 0,
+                                               'back': 1, 'front': 1,
+                                               'bottom': 2, 'top': 2}
+            map_boundary_to_side = {'left': 'left', 'right': 'right',
+                                    'bottom': 'left', 'top': 'right',
+                                    'back': 'left', 'front': 'right'}
+        else:
+            raise ValueError()
         # repeat base dictionary for every component and direction
         self._processed_bcs = [[{'left': list(), 'right': list()} for _ in range(self._dim)]
                                for _ in range(self._dim)]
