@@ -203,7 +203,7 @@ class ShearTest(ElasticProblem):
         elif self._name_suffix == 'TractionControlled':
             self.tau0 = 10
         else:
-            raise ValueError()
+            raise NotImplementedError()
         super().__init__(N, domain, elastic_law)
 
     def set_analytical_solution(self):
@@ -216,16 +216,30 @@ class ShearTest(ElasticProblem):
             elif self._name_suffix == 'TractionControlled':
                 assert hasattr(self, 'tau0')
                 self.u_ana = (self.tau0 / mu * y, 0.)
+            else:
+                raise NotImplementedError()
         elif self.elastic_law.name == 'LinearGradientElasticity':
+            lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
+            zeta = sp.sqrt((c1 + c4) / mu)
+            h = self.h
             if self._name_suffix == 'DisplacementControlled':
-                u0, h = self.u0, self.h
-                lmbda, mu, c1, c2, c3, c4, c5 = self.material_parameters
-                zeta = sp.sqrt((c1 + c4) / mu)
+                u0 = self.u0
                 A1 = u0 * sinh(h / zeta) / \
                     (sinh(h / zeta) - h / zeta * cosh(h / zeta))
                 A2 = - u0 / zeta * cosh(h / zeta) / \
                     (sinh(h / zeta) - h / zeta * cosh(h / zeta))
                 A3 = - zeta * A2
+                A4 = - A1
+                self.u_ana = (A1 + A2 * y + A3 * sinh(y / zeta) +
+                              A4 * cosh(y / zeta), 0.)
+            elif self._name_suffix == 'TractionControlled':
+                assert hasattr(self, 'tau0')
+                xi = 1. / (mu * cosh(h / zeta) * zeta ** 2 \
+                           - cosh(h / zeta) ** 2 * (mu * zeta ** 2 - (c1 + c4)) \
+                               + sinh(h / zeta) ** 2 * (mu * zeta ** 2 - (c1 + c4)))
+                A1 = - xi * zeta ** 3 * self.tau0 * sinh(h / zeta)
+                A2 = xi * zeta ** 2 * self.tau0 * cosh(h / zeta)
+                A3 = - A2 * zeta
                 A4 = - A1
                 self.u_ana = (A1 + A2 * y + A3 * sinh(y / zeta) +
                               A4 * cosh(y / zeta), 0.)
@@ -245,6 +259,12 @@ class ShearTest(ElasticProblem):
         elif self.elastic_law.name == 'LinearGradientElasticity':
             if self._name_suffix == 'DisplacementControlled':
                 self._bcs = {'top': [(DisplacementBC.function_component, 0, self.u0),
+                                     (DisplacementBC.function_component, 1, 0.)],
+                             'bottom': [(DisplacementBC.fixed, None),
+                                        (DisplacementBC.fixed_gradient_component,
+                                         0, None)]}
+            elif self._name_suffix == 'TractionControlled':
+                self._bcs = {'top': [(TractionBC.function_component, 0, self.tau0),
                                      (DisplacementBC.function_component, 1, 0.)],
                              'bottom': [(DisplacementBC.fixed, None),
                                         (DisplacementBC.fixed_gradient_component,
@@ -333,24 +353,23 @@ def test_shear_test():
     N = (round(length_ratio / 5) * 30, 30)
     domain = ((0., ell), (0., h))
     print('Starting shear test ...')
-    for elastic_law, name_suffix in ((LinearCauchyElasticity(), 'DisplacementControlled'),
-                                     (LinearCauchyElasticity(), 'TractionControlled'),
-                                     (LinearGradientElasticity(), 'DisplacementControlled')):
-        Shear = ShearTest(N, domain, elastic_law, name_suffix)
-        Shear.solve()
-        u_ana_dl = get_dimensionless_displacement(Shear.u_ana,
-                                                  Shear._l_ref,
-                                                  Shear._u_ref)
+    for elastic_law in (LinearCauchyElasticity(), LinearGradientElasticity()):
+        for name_suffix in ('DisplacementControlled', 'TractionControlled'):
+            Shear = ShearTest(N, domain, elastic_law, name_suffix)
+            Shear.solve()
+            u_ana_dl = get_dimensionless_displacement(Shear.u_ana,
+                                                      Shear._l_ref,
+                                                      Shear._u_ref)
 
-        error_center = sf.Array(Shear.solution.function_space(),
-                                buffer=u_ana_dl)[0, round(N[0] / 2), :] - \
-            Shear.solution.backward()[0, round(N[0] / 2), :]
+            error_center = sf.Array(Shear.solution.function_space(),
+                                    buffer=u_ana_dl)[0, round(N[0] / 2), :] - \
+                Shear.solution.backward()[0, round(N[0] / 2), :]
 
-        error = np.linalg.norm(error_center)
-        assert error < 1e-5, 'Error tolerance not achieved'
-        Shear.postprocess()
+            error = np.linalg.norm(error_center)
+            assert error < 1e-5, 'Error tolerance not achieved'
+            Shear.postprocess()
 
-        print(f'Error {elastic_law._name} ({name_suffix}):\t {error}\t N = {N}')
+            print(f'Error {elastic_law._name} ({name_suffix}):\t {error}\t N = {N}')
     print('Finished tensile test (clamped)!')
 
 
