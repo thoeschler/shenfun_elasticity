@@ -234,6 +234,10 @@ class ShearTest(ElasticProblem):
                               A4 * cosh(y / zeta), 0.)
             elif self._name_suffix == 'TractionControlled':
                 assert hasattr(self, 'tau0')
+                # Analyt. sol. from "On Finite Element Analysis in Generalized
+                # Mechanics", DOI: https://doi.org/10.1007/978-3-030-49882-5_23
+                # Notice that there is a sign error in the definition of \xi
+                # in eq. (25) of the paper
                 xi = 1. / (mu * cosh(h / zeta) * zeta ** 2 \
                            - cosh(h / zeta) ** 2 * (mu * zeta ** 2 - (c1 + c4)) \
                                + sinh(h / zeta) ** 2 * (mu * zeta ** 2 - (c1 + c4)))
